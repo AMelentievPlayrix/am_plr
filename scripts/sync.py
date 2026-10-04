@@ -1,21 +1,22 @@
-"""am_plr sync: links skills/agents/rules into Claude Code and generates MCP config.
+"""am_plr sync: checks the am-plr plugin, links rules, generates MCP config and settings previews.
 
 Run via scripts/setup.sh (it creates the venv first). Stdlib only, Python 3.11+.
 
-Layering (Claude Code precedence):
-  skills/agents  personal (~/.claude, ours) > project (upstream repo) -> a same-named
-                 am_plr item would SHADOW upstream. Ours are named am-<name>; on a collision
-                 setup asks to rename ours and never links it as-is.
-  rules          all levels load together -> linked as one dir ~/.claude/rules/am_plr.
-  mcp            local > project (.mcp.json) > user (ours) -> upstream project config
-                 always wins; we never write any MCP config, only print commands.
+Layering:
+  skills/agents  shipped as the Claude Code plugin "am-plr" (this repo): namespaced as
+                 am-plr:<skill>, so they never collide with upstream project skills.
+  rules          plugins can't ship rules -> linked as one dir ~/.claude/rules/am_plr.
+  mcp            user scope (generated commands); a repo's own .mcp.json still wins inside it.
+                 Not in the plugin: plugin servers get tool names mcp__plugin_am-plr_<server>__*,
+                 which would break upstream skills that call mcp__qase__* etc.
 """
 
 import json
 import os
 import re
+import glob
 import shlex
-import subprocess
+import shutil
 import sys
 import tomllib
 from pathlib import Path
@@ -33,7 +34,9 @@ if sys.stdout.isatty():
 else:
     B = G = Y = R = D = N = ""
 
+PLUGIN_ID = "am-plr@am-plr"
 warnings = []
+todo = []  # (title, [lines]) printed as numbered "Next steps" at the end
 
 
 def step(msg):
@@ -42,10 +45,6 @@ def step(msg):
 
 def ok(msg):
     print(f"  {G}+{N} {msg}")
-
-
-def gone(msg):
-    print(f"  {R}-{N} {msg}")
 
 
 def info(msg):
@@ -88,111 +87,41 @@ def load_config():
     return upstreams, cfg.get("mcp", {})
 
 
-def scan_upstream(root: Path):
-    """Skill and agent names Claude Code loads from this repo at project scope."""
-    skills = {}
-    for d in sorted((root / ".claude" / "skills").glob("*/SKILL.md")):
-        skills[frontmatter_name(d) or d.parent.name] = d.parent
-        skills.setdefault(d.parent.name, d.parent)
-    agents = {frontmatter_name(f) or f.stem: f for f in sorted((root / ".claude" / "agents").glob("*.md"))}
-    return skills, agents
+def claude_cli():
+    """`claude` on PATH, else the newest binary bundled with the VS Code extension."""
+    found = shutil.which("claude")
+    if found:
+        return "claude"
+    bundled = sorted(glob.glob(str(Path.home() / ".vscode/extensions/anthropic.claude-code-*"
+                                                 "/resources/native-binary/claude")))
+    return shlex.quote(bundled[-1]) if bundled else "claude"
 
 
-# ----------------------------------------------------------------------------- linking
-
-PREFIX = "am-"
-
-
-def ask(question):
-    """y/N prompt; False when not interactive (e.g. piped output, CI)."""
-    if not sys.stdin.isatty():
-        return False
+def check_plugin(cli):
+    """Skills/agents come from the am-plr plugin; setup only checks it is installed and enabled."""
     try:
-        return input(f"  {Y}?{N} {question} [y/N] ").strip().lower() in ("y", "yes")
-    except EOFError:
-        return False
+        settings = json.loads((CLAUDE_DIR / "settings.json").read_text())
+    except (OSError, json.JSONDecodeError):
+        settings = {}
+    if (settings.get("enabledPlugins") or {}).get(PLUGIN_ID):
+        info(f"plugin {PLUGIN_ID} enabled - skills load from {REPO}/skills")
+        return
+    print(f"  {Y}~{N} plugin {PLUGIN_ID} not installed yet")
+    todo.append(("Install the am-plr plugin (once per machine)", [
+        f"{cli} plugin marketplace add {shlex.quote(str(REPO))}",
+        f"{cli} plugin install {PLUGIN_ID}",
+        "# or inside Claude Code: /plugin marketplace add <path>  then  /plugin install am-plr@am-plr",
+    ]))
 
 
-def rename_skill(old: str, new: str):
-    """skills/<old> -> skills/<new>: moves the dir, sets frontmatter `name:`, fixes references in all skills."""
-    src, dst = REPO / "skills" / old, REPO / "skills" / new
-    if dst.exists():
-        raise FileExistsError(dst)
-    tracked = subprocess.run(["git", "-C", str(REPO), "ls-files", "--error-unmatch", str(src)],
-                             capture_output=True).returncode == 0
-    if tracked:
-        subprocess.run(["git", "-C", str(REPO), "mv", str(src), str(dst)], check=True)
-    else:
-        src.rename(dst)
-    skill_md = dst / "SKILL.md"
-    skill_md.write_text(re.sub(r"^name:.*$", f"name: {new}", skill_md.read_text(), count=1, flags=re.M))
-    o = re.escape(old)
-    if re.search(r"[-_]", old):  # distinctive name: replace every whole-token occurrence
-        patterns = [rf"(?<![\w-]){o}(?![\w-])"]
-    else:  # plain word like "commit": only where it clearly names the skill
-        patterns = [rf"(?<=/){o}(?![\w-])", rf"(?<=`){o}(?=` skill)", rf"(?<=the ){o}(?= skill)"]
-    for f in (REPO / "skills").rglob("*.md"):
-        text = f.read_text()
-        fixed = text
-        for p in patterns:
-            fixed = re.sub(p, new, fixed)
-        if fixed != text:
-            f.write_text(fixed)
-
-
-def resolve_collisions(kind, items, upstream_names):
-    """Ask to rename our skills that collide with an upstream one (personal scope would hide theirs)."""
-    resolved = {}
-    for link_name, (src, logical) in sorted(items.items()):
-        clash = upstream_names.get(logical) or upstream_names.get(link_name)
-        if not clash:
-            resolved[link_name] = (src, logical)
-            continue
-        new = PREFIX + re.sub(r"[_\s]+", "-", link_name.removeprefix(PREFIX))
-        warn(f"{kind} '{logical}' collides with upstream {clash}: linking it would hide theirs in every project")
-        if kind == "skill" and not (REPO / "skills" / new).exists() and ask(f"Rename ours to '{new}'?"):
-            rename_skill(link_name, new)
-            ok(f"renamed skill '{link_name}' -> '{new}' (review with `git diff`, then commit)")
-            resolved[new] = (REPO / "skills" / new, new)
-        else:
-            warn(f"{kind} '{logical}' NOT linked - rename it (re-run setup in a terminal to get the prompt)")
-    return resolved
-
-
-def sync_links(kind, items, dst: Path, upstream_names):
-    """items: {link_name: (source_path, logical_name)}; links them into dst, prunes ours."""
-    dst.mkdir(parents=True, exist_ok=True)
-    wanted = {name: src for name, (src, _) in resolve_collisions(kind, items, upstream_names).items()}
-
-    for link_name, src in wanted.items():
-        target = dst / link_name
-        if target.is_symlink():
-            cur = os.readlink(target)
-            if Path(cur) == src:
-                info(f"{kind} '{link_name}' up to date")
-                continue
-            target.unlink()
-            target.symlink_to(src)
-            ok(f"{kind} '{link_name}' relinked (was -> {cur})")
-        elif target.exists():
-            warn(f"{kind} '{link_name}' NOT linked: {target} exists and is not a symlink "
-                 f"(remove it to let am_plr manage it)")
-        else:
-            target.symlink_to(src)
-            ok(f"{kind} '{link_name}' linked")
-
-    # prune: our links (pointing into this repo) that are no longer wanted
-    for target in sorted(dst.iterdir()):
-        if not target.is_symlink():
-            continue
-        cur = Path(os.readlink(target))
-        if REPO not in cur.parents:
-            continue
-        if wanted.get(target.name) != cur:
-            target.unlink()
-            gone(f"{kind} '{target.name}' unlinked (removed/renamed in am_plr or now conflicting)")
-
-    info(f"{len(wanted)} am_plr {kind}(s) active in {dst}")
+def remove_old_links():
+    """Earlier setup versions symlinked skills/agents into ~/.claude; the plugin replaces them."""
+    for kind in ("skills", "agents"):
+        d = CLAUDE_DIR / kind
+        for target in sorted(d.iterdir()) if d.is_dir() else []:
+            if target.is_symlink() and REPO in Path(os.readlink(target)).parents:
+                target.unlink()
+                info(f"removed old symlink {target} (now provided by the plugin)")
 
 
 def sync_rules():
@@ -292,39 +221,38 @@ def check_secrets(servers):
     env_file, example = REPO / ".env", REPO / ".env.example"
     needed = {v: n for n, s in servers.items() for v in env_refs(s)}
     if not env_file.exists():
-        warn(f"{env_file} missing: cp {example} {env_file}  # then fill in tokens")
+        warn(f"{env_file} missing")
+        todo.append(("Create .env with your tokens (git-ignored)", [f"cp {example} {env_file}  # then fill it in"]))
         return
     missing = sorted(v for v in needed if not os.environ.get(v))
     for var in missing:
         warn(f"{var} (mcp '{needed[var]}') is empty in {env_file}")
-    if needed and not missing:
+    if missing:
+        todo.append(("Fill in empty tokens, then open a new terminal", [f"{env_file}: {', '.join(missing)}"]))
+    elif needed:
         info(f"all {len(needed)} MCP token(s) set in {env_file}")
 
 
 def check_shell():
     """~/.zshrc is never edited; only report whether it sources am_plr/shell/init.zsh."""
     zshrc, init = Path.home() / ".zshrc", REPO / "shell" / "init.zsh"
-    if not init.is_file():
-        return None
     text = zshrc.read_text(errors="ignore") if zshrc.is_file() else ""
     if re.search(r"^\s*(source|\.)\s+.*am_plr/shell/init\.zsh", text, re.M):
         info(f"{zshrc} sources {init}")
-        return None
-    print(f"  {Y}~{N} {zshrc} does not source am_plr shell config yet")
-    return f"source {shlex.quote(str(init).replace(str(Path.home()), '~', 1))}"
-
-
-def print_settings_instructions(previews):
-    step("Settings - nothing was applied, copy what you need")
-    if not previews:
-        print(f"  {G}Claude Code and VS Code user settings are in sync.{N}")
         return
-    print("  Each generated file = your current settings + am_plr keys (nothing of yours removed).")
+    print(f"  {Y}~{N} {zshrc} does not source am_plr shell config yet")
+    line = f"source {str(init).replace(str(Path.home()), '~', 1)}"
+    todo.append(("Load tokens, aliases and prompt in every terminal", [
+        f"echo {shlex.quote(line)} >> ~/.zshrc   # then open a new terminal and restart VS Code"]))
+
+
+def settings_todo(previews):
+    q = shlex.quote
     for label, dst, out in previews:
-        q = shlex.quote
-        print(f"\n  {B}{label}{N}")
-        print(f"    diff {q(str(dst))} {q(str(out))}")
-        print(f"    cp {q(str(dst))} {q(str(dst) + '.bak')} && cp {q(str(out))} {q(str(dst))}")
+        todo.append((f"Review and apply {label} settings (your keys + am_plr keys, nothing removed)", [
+            f"diff {q(str(dst))} {q(str(out))}",
+            f"cp {q(str(dst))} {q(str(dst) + '.bak')} && cp {q(str(out))} {q(str(dst))}",
+        ]))
 
 
 # ----------------------------------------------------------------------------- mcp
@@ -378,15 +306,14 @@ def build_mcp(upstreams, mcp_specs):
     return servers, manual
 
 
-def check_skill_mcp_refs(servers, manual, extra_dirs):
+def check_skill_mcp_refs(servers, manual, skill_dirs):
     """Warn when skills call mcp__<server>__ that no config provides."""
     known = set(servers) | set(manual)
     try:
-        cur = json.loads(CLAUDE_JSON.read_text())
-        known |= set(cur.get("mcpServers") or {})
+        known |= set(json.loads(CLAUDE_JSON.read_text()).get("mcpServers") or {})
     except (OSError, json.JSONDecodeError):
         pass
-    for skill_dir in extra_dirs:
+    for skill_dir in skill_dirs:
         refs = set()
         for f in skill_dir.rglob("*.md"):
             refs |= set(re.findall(r"mcp__([A-Za-z0-9_-]+?)__", f.read_text(encoding="utf-8", errors="ignore")))
@@ -394,122 +321,73 @@ def check_skill_mcp_refs(servers, manual, extra_dirs):
             warn(f"skill '{skill_dir.name}' calls mcp__{r}__* but no MCP server '{r}' is configured")
 
 
-def print_mcp_instructions(servers, manual):
+def mcp_todo(servers, manual, cli):
+    """Compare with user-scope MCP config and queue the commands to run. Nothing is written."""
     try:
         current = json.loads(CLAUDE_JSON.read_text()).get("mcpServers") or {}
     except (OSError, json.JSONDecodeError):
         current = {}
-
     strip = lambda s: {k: v for k, v in s.items() if k != "type"}
     new = [n for n in servers if n not in current]
     changed = [n for n in servers if n in current and strip(current[n]) != strip(servers[n])]
-    same = [n for n in servers if n in current and n not in changed]
     stale = [n for n, s in current.items() if n not in servers and str(REPO) in json.dumps(s)]
-    manual_todo = {n: m for n, m in manual.items() if n not in current}
-
-    step("MCP setup - nothing was applied, copy what you need")
-    if not servers and not manual:
-        info("no MCP servers configured")
-        return
-    print(f"  Compared with user scope in {CLAUDE_JSON}:")
-    for n in same:
-        info(f"= {n} (already configured)")
-    for n in new:
-        print(f"    {G}+ {n} (new){N}")
-    for n in changed:
-        print(f"    {Y}~ {n} (differs){N}")
+    for n in servers:
+        mark = f"{G}+ new{N}" if n in new else f"{Y}~ differs{N}" if n in changed else f"{D}= in sync{N}"
+        print(f"    {n}: {mark}")
     for n in stale:
-        print(f"    {R}- {n} (no longer provided by am_plr){N}")
-    for n in manual_todo:
-        print(f"    {Y}? {n} (manual){N}")
+        print(f"    {n}: {R}- no longer in am_plr{N}")
 
     if new or changed or stale:
         # values are read from the generated file, so tokens never land in chat/terminal history
-        print(f"\n  {B}Claude Code, all projects (user scope){N} - run in a terminal:\n")
-        for n in changed + stale:
-            print(f"    claude mcp remove --scope user {shlex.quote(n)}")
-        for n in new + changed:
-            print(f"    claude mcp add-json --scope user {shlex.quote(n)} "
-                  f"\"$(jq -c '.mcpServers[\"{n}\"]' {shlex.quote(str(MCP_JSON))})\"")
-    else:
-        print(f"\n  {G}User-scope MCP config is in sync.{N}")
-
-    for n, (src, text) in manual_todo.items():
-        print(f"\n  {B}{n}{N} (manual, from {src}):")
-        for line in text.strip().splitlines():
-            print(f"    {line}")
-
-    print(f"""
-  {B}Other options{N}
-    - one session:    claude --mcp-config {MCP_JSON}
-    - one project:    copy entries from {MCP_JSON} into <project>/.mcp.json
-  Then restart Claude Code or check with /mcp.""")
+        lines = [f"{cli} mcp remove --scope user {shlex.quote(n)}" for n in changed + stale]
+        lines += [f"{cli} mcp add-json --scope user {shlex.quote(n)} "
+                  f"\"$(jq -c '.mcpServers[\"{n}\"]' {shlex.quote(str(MCP_JSON))})\"" for n in new + changed]
+        todo.append(("Add MCP servers for all projects (user scope)", lines))
+    for n, (src, text) in manual.items():
+        if n not in current:
+            todo.append((f"Set up MCP '{n}' by hand (from {src})", text.strip().splitlines()))
 
 
 # ----------------------------------------------------------------------------- main
 
 def main():
-    upstreams, upstream_mcp = load_config()
+    upstreams, mcp_specs = load_config()
+    cli = claude_cli()
 
-    step("Upstream repos (upstreams.toml)")
-    up_skills, up_agents = {}, {}
-    for name, root in upstreams.items():
-        if not root.is_dir():
-            warn(f"upstream '{name}': {root} not found - its MCP servers are skipped")
-            continue
-        s, a = scan_upstream(root)
-        for k in s:
-            up_skills.setdefault(k, f"{name}/.claude/skills")
-        for k in a:
-            up_agents.setdefault(k, f"{name}/.claude/agents")
-        ok(f"{name}: {root} ({len(set(s.values()))} skills, {len(a)} agents)")
-
-    skills = {}
-    for d in sorted((REPO / "skills").iterdir()) if (REPO / "skills").is_dir() else []:
-        if not d.is_dir() or not visible(d):
-            continue
-        if not (d / "SKILL.md").is_file():
-            warn(f"skill '{d.name}' skipped: no SKILL.md")
-            continue
-        skills[d.name] = (d, frontmatter_name(d / "SKILL.md") or d.name)
-        if not d.name.startswith(PREFIX):
-            warn(f"skill '{d.name}' has no '{PREFIX}' prefix - our skills are named {PREFIX}<name> "
-                 f"to never collide with upstream ones")
-    step(f"Skills -> {CLAUDE_DIR / 'skills'}")
-    sync_links("skill", skills, CLAUDE_DIR / "skills", up_skills)
-
-    agents = {}
-    for f in sorted((REPO / "agents").glob("*.md")) if (REPO / "agents").is_dir() else []:
-        if visible(f) and f.name != "README.md":
-            agents[f.name] = (f, frontmatter_name(f) or f.stem)
-    step(f"Agents -> {CLAUDE_DIR / 'agents'}")
-    sync_links("agent", agents, CLAUDE_DIR / "agents", up_agents)
+    step("Plugin (skills, agents) -> Claude Code")
+    remove_old_links()
+    check_plugin(cli)
+    skill_dirs = [d for d in sorted((REPO / "skills").glob("*")) if (d / "SKILL.md").is_file()]
+    info(f"{len(skill_dirs)} skill(s): {', '.join('am-plr:' + d.name for d in skill_dirs)}")
 
     step(f"Rules -> {CLAUDE_DIR / 'rules' / 'am_plr'}")
     sync_rules()
 
     step(f"Settings (config/) -> {GEN_DIR}")
-    previews = sync_settings()
-    shell_line = check_shell()
+    settings_todo(sync_settings())
+    check_shell()
 
     step(f"MCP -> {MCP_JSON}")
-    servers, manual = build_mcp(upstreams, upstream_mcp)
+    servers, manual = build_mcp(upstreams, mcp_specs)
     check_secrets(servers)
-    check_skill_mcp_refs(servers, manual, [src for src, _ in skills.values()])
-
-    print_mcp_instructions(servers, manual)
-
-    print_settings_instructions(previews)
-    if shell_line:
-        step("Shell - nothing was applied")
-        print(f"  Add to the end of ~/.zshrc (then open a new terminal):\n")
-        print(f"    {shell_line}")
+    check_skill_mcp_refs(servers, manual, skill_dirs)
+    mcp_todo(servers, manual, cli)
 
     step("Done" + (f" with {len(warnings)} warning(s)" if warnings else ""))
     for w in warnings:
         print(f"  {Y}!{N} {w}")
-    info("SKILL.md/rule edits are live. Re-run after adding/renaming/deleting skills or agents,")
-    info("editing config/ mcp/ upstreams.toml, or pulling upstream repos.")
+    order = ("Create .env", "Fill in", "Load tokens", "Install the am-plr", "Add MCP", "Set up MCP", "Review")
+    todo.sort(key=lambda t: next((i for i, p in enumerate(order) if t[0].startswith(p)), len(order)))
+    if todo:
+        print(f"\n{B}Next steps{N} - setup changed nothing outside ~/.claude/rules; run these yourself:")
+        for i, (title, lines) in enumerate(todo, 1):
+            print(f"\n  {B}{i}. {title}{N}")
+            for line in lines:
+                print(f"     {line}")
+        print(f"\n  {B}{len(todo) + 1}. Restart Claude Code{N}, then check with /plugin, /mcp and /skills.")
+    else:
+        print(f"\n  {G}All set.{N} Skill/rule edits are live (/reload-plugins in an open session).")
+    info("Re-run setup after editing config/, upstreams.toml, .env, or pulling upstream repos.")
 
 
 if __name__ == "__main__":

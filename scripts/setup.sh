@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # One-shot setup for am_plr. Safe to re-run any time; every step is idempotent.
 #
-#   - skills/agents -> ~/.claude/{skills,agents} (symlinks, conflict-checked against upstream repos)
+#   - checks the am-plr plugin (skills) is installed - installing it is your step
 #   - rules         -> ~/.claude/rules/am_plr (one symlink)
 #   - MCP config and settings previews -> artifacts/generated/ + copy-paste instructions
 #
-# Only symlinks under ~/.claude/{skills,agents,rules} are created/removed; nothing else is written
+# Only the ~/.claude/rules/am_plr symlink is created (and old skill symlinks removed); nothing else is written
 # outside artifacts/. Honors CLAUDE_CONFIG_DIR (defaults to ~/.claude), same as Claude Code itself.
 
 set -euo pipefail

@@ -1,10 +1,7 @@
-# Upstream repos that am_plr extends.
+# Team repos that am_plr is layered on, and every MCP server am_plr sets up.
 #
-# Upstream skills/agents/rules stay in their repos and are loaded by Claude Code as
-# project scope (when you work in / add that repo). am_plr adds personal-scope items on
-# top, all named am-<name>. If one still collides with an upstream name (personal scope
-# would silently hide theirs), setup.sh reports it and asks to rename ours. Pull upstream
-# as usual; just re-run setup.sh to re-check collisions and MCP paths.
+# Upstream skills/agents/rules stay in their repos and load as project scope. Our skills come
+# from the am-plr plugin (namespaced am-plr:<skill>), so the two never collide.
 
 [upstream.perfect-project]
 path = "~/projects/perfect-project"
