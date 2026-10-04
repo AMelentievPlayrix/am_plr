@@ -13,9 +13,8 @@ If you are not in Plan mode switch to Plan mode.
 
 1. Extract the test ID from the user message (e.g. "10559" from "add uwp test for 10559").
 2. Find `tests/tests_in_app_purchase/test_{id}_*.py` and read it fully — including the existing `_ios`, `_mac` and `_facebook` functions and shared `common_part*` helpers. If file not found STOP here and describe it in chat.
-3. Read the tool schema at
-   `/Users/playrix/.cursor/projects/Users-playrix-projects-vso-engine-autotests/mcps/user-qase-mcp-server/tools/get_test_case_data.json`,
-   then call `user-qase-mcp-server` → `get_test_case_data(project_code="VSO", test_case_id={id})`.
+3. Read the case with `mcp__qase__get_test_case_data(project_code="VSO", test_case_id={id})`
+   (see [mcp-tools.md](../../engine-create-autotest/reference/mcp-tools.md)).
 4. Inspect the QASE steps for any platform-prefixed entries (e.g. `iOS:`, `macOS:`, `UWP:`/`Windows:`); note every difference relevant to UWP.
 5. Map each `step.system_ui.ios.*` / `step.system_ui.mac.*` call in the test file to its UWP equivalent using the tables below.
 6. Mark iOS/macOS-only intermediate steps (sandbox sign-in, already-purchased dialog, App Store auth, success-dialog OK click, `confirm_purchase(confirm=False)` cancel) as dropped or as **requiring a new UWP step** — most do not exist on UWP yet.

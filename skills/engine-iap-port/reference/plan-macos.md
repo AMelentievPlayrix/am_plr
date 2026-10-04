@@ -11,9 +11,8 @@ If you are not in Plan mode switch to Plan mode
 
 1. Extract the test ID from the user message (e.g. "10559" from "add mac test for 10559").
 2. Find `tests/tests_in_app_purchase/test_{id}_*.py` and read it fully. If file not found STOP here and describe it in chat.
-3. Read the tool schema at
-   `/Users/playrix/.cursor/projects/Users-playrix-projects-vso-engine-autotests/mcps/user-qase-mcp-server/tools/get_test_case_data.json`,
-   then call `user-qase-mcp-server` → `get_test_case_data(project_code="VSO", test_case_id={id})`.
+3. Read the case with `mcp__qase__get_test_case_data(project_code="VSO", test_case_id={id})`
+   (see [mcp-tools.md](../../engine-create-autotest/reference/mcp-tools.md)).
 4. Inspect the QASE steps for any platform-prefixed entries (e.g. `iOS:`, `macOS:`); note every difference between iOS and macOS.
 5. Map each `step.system_ui.ios.*` call in the test file to its macOS equivalent using the table below.
 6. Mark iOS-only intermediate steps (sandbox sign-in, already-purchased dialog) as dropped — they have no macOS counterpart.
