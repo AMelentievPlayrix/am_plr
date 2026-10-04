@@ -1,74 +1,95 @@
 # am_plr
 
-My personal Claude Code + VS Code setup, applied to all projects at once.
+My personal Claude Code + VS Code + shell setup, applied to all projects at once.
 It sits **on top of** team repos (perfect-project, vso-engine-autotests) and never conflicts with them.
+
+- **Skills** ship as a Claude Code plugin, `am-plr`. Use them in any project as `/am-plr:<skill>`.
+- **Rules, MCP servers, settings, shell** are prepared by `scripts/setup.sh`.
 
 ## Setup, step by step
 
-1. **Tokens and shell** (first time on a machine; needs [uv](https://docs.astral.sh/uv/)):
-   ```bash
-   cp ~/projects/am_plr/.env.example ~/projects/am_plr/.env      # fill in tokens; .env is git-ignored
-   echo 'source ~/projects/am_plr/shell/init.zsh' >> ~/.zshrc   # exports .env + loads aliases/prompt
-   ```
-   Open a new terminal (and restart VS Code) so the tokens are in the environment.
-2. **Run setup** (again any time something changes):
+Needs [uv](https://docs.astral.sh/uv/) and `jq`.
+
+1. **Run setup** (again any time something changes):
    ```bash
    ~/projects/am_plr/scripts/setup.sh
    ```
-   It warns about any token the MCP config needs that is still empty in `.env`.
-3. **MCP servers**: paste the `claude mcp add-json ...` commands setup prints. Only Asana needs a one-time
-   manual OAuth step (also printed). The config holds `${QASE_API_TOKEN}`-style references, not tokens.
-4. **Settings** (only if setup shows `~ Claude Code` / `~ VS Code`): review each with the printed `diff`,
-   then run the printed `cp`.
-5. **Restart** Claude Code. Check with `/mcp` and `/skills`.
+2. **Do the "Next steps" it prints at the end.** Only what's still missing is listed, in order:
+   - create `.env` from `.env.example` and fill in the tokens (git-ignored);
+   - add `source ~/projects/am_plr/shell/init.zsh` to `~/.zshrc` (loads tokens, aliases, prompt);
+   - install the plugin: `claude plugin marketplace add ~/projects/am_plr` and `claude plugin install am-plr@am-plr`;
+   - paste the `claude mcp add-json ...` commands (Asana needs a one-time manual OAuth step, also printed);
+   - review the Claude Code / VS Code settings with the printed `diff`, then run the printed `cp`.
+3. **Restart** the terminal, VS Code and Claude Code. Check with `/plugin`, `/mcp` and `/skills`.
+4. Run setup again: when everything is in place it prints **All set**.
 
-### What "all done" means after step 2
+### What setup does by itself
 
-| Done automatically                                                        | Where                                        |
-|---------------------------------------------------------------------------|----------------------------------------------|
-| My skills / agents available in every project                             | symlinks in `~/.claude/skills`, `~/.claude/agents` |
-| My rules (`rules/*.md`) loaded in every project                            | symlink `~/.claude/rules/am_plr`             |
-| MCP config generated                                                      | `artifacts/generated/mcp.json`               |
-| Claude Code / VS Code user settings generated (yours + am_plr keys)       | `artifacts/generated/{claude,vscode}-settings.json` |
+| Done automatically | Where |
+|---|---|
+| My rules (`rules/*.md`) loaded in every project | symlink `~/.claude/rules/am_plr` |
+| MCP config generated | `artifacts/generated/mcp.json` |
+| Claude Code / VS Code settings generated (yours + am_plr keys) | `artifacts/generated/{claude,vscode}-settings.json` |
+| Checks: plugin installed, tokens set, `~/.zshrc` sources am_plr, skills call only configured MCP servers | printed as warnings / next steps |
 
-**Never changed by setup:** your MCP config, `~/.claude/settings.json`, VS Code user settings and any project file.
-Setup only generates files in `artifacts/generated/` and prints how to apply them (steps 3–4).
+**Never changed by setup:** plugin install, MCP config, `~/.claude/settings.json`, VS Code settings, `~/.zshrc`
+and any project file. You run those steps yourself from the printed list.
+
+## Using the skills in a project
+
+Open Claude Code in any project. The plugin is enabled for all of them:
+
+```
+/am-plr:commit                  split changes into logical commits
+/am-plr:describe-work           Asana task + GitHub PR for the changes
+/am-plr:engine-create-autotest  new vso-engine-autotests test from a Qase case
+/am-plr:engine-fix-autotest     repair a broken autotest from an Asana task
+/am-plr:engine-iap-port         port an iOS in-app purchase test to macOS / UWP
+/am-plr:prompt-writer           turn a rough idea into a good prompt
+```
+
+Claude also picks them up automatically from their descriptions. Team skills keep their own names
+(e.g. `/perf-report`); ours always carry the `am-plr:` prefix, so the two never clash.
+Edits to a skill apply in the next session, or right away with `/reload-plugins`.
 
 ## What lives where
 
 ```
-skills/am-<name>/SKILL.md       my skills (always am- prefix) -> every project
-agents/<name>.md                my subagents           -> every project
+.claude-plugin/                 plugin manifest + local marketplace (this repo is both)
+skills/<name>/SKILL.md          my skills -> /am-plr:<name> in every project
+agents/<name>.md                my subagents -> am-plr:<name>
 rules/*.md                      my rules, loaded in every session (`paths:` frontmatter to scope)
 mcp/<name>/                     code of my own MCP servers (configured in upstreams.toml)
+upstreams.toml                  team repos I follow + all MCP servers (theirs and mine)
 config/claude/settings.json     model, effort, permissions I want everywhere
 config/vscode/settings.json     editor settings I want everywhere (autosave, 120 ruler, terminal, Python)
-shell/*.zsh                     aliases, functions, prompt; all loaded by shell/init.zsh (sourced from ~/.zshrc)
-.env                            all tokens, git-ignored (template: .env.example); exported by shell/init.zsh
-upstreams.toml                  team repos I follow + all MCP servers (theirs and mine)
+shell/*.zsh                     aliases, functions, prompt; loaded by shell/init.zsh (sourced from ~/.zshrc)
+.env                            all tokens, git-ignored (template: .env.example); loaded by shell/init.zsh
+workspaces/*.code-workspace     VS Code multi-folder workspaces
 ```
 
 ## How conflicts are avoided
 
 - **Team skills/agents/rules stay in their repos** and load from there. am_plr never copies them.
-- **Our skills are named `am-<name>`**, so they don't collide with team ones. If one still does (it would hide
-  the team version in every project), setup reports it and asks to rename ours. It's never linked as-is.
-- **MCP**: a repo's own `.mcp.json` always wins over user-level config, so team config can't break.
+- **Skills**: plugin skills are namespaced (`am-plr:commit`), so they can't hide a team skill.
+- **MCP**: servers are added at user scope with the same names the team skills use (`qase`, `cats-mcp-server`, …).
+  A repo's own `.mcp.json` still wins inside that repo. They aren't shipped in the plugin, because plugin
+  servers get prefixed tool names (`mcp__plugin_am-plr_qase__…`) that the team skills don't call.
 - **Settings**: common settings live in am_plr; project-specific ones (interpreter, pytest args, launch.json)
   stay in each project's `.vscode/`. Generated files add am_plr keys on top of yours and drop nothing.
 
 ## Changing things
 
-| I want to…                         | Do                                                       | Re-run setup? |
-|------------------------------------|----------------------------------------------------------|---------------|
-| edit a skill / rule               | just edit it                                             | no            |
-| add / rename / delete a skill or agent | change `skills/am-<name>/` or `agents/`           | yes           |
-| change editor / Claude settings    | edit `config/`                                           | yes, then copy the printed command |
-| add my own MCP server              | code in `mcp/<name>/` (deps inline, run with `uv run --script`) + `[mcp.<name>]` in `upstreams.toml` | yes, then copy the printed command |
-| use a team repo's MCP server       | add `[mcp.<name>]` to `upstreams.toml`                   | yes, then copy the printed command |
-| follow another team repo           | add `[upstream.<name>]` to `upstreams.toml`              | yes           |
-| add an alias / shell function      | new or existing `shell/<NN>-name.zsh` (loaded in name order) | no, open a new terminal |
-| add a token                        | `.env` (+ the name in `.env.example`), use as `${VAR}` in MCP config | yes, new terminal |
-| add a machine-only PATH            | `~/.zshrc` / `~/.zprofile` (outside git)                 | no            |
+| I want to… | Do | Then |
+|---|---|---|
+| edit a skill or rule | just edit it | `/reload-plugins` or new session |
+| add / rename / delete a skill | change `skills/<name>/` | `/reload-plugins` |
+| change editor / Claude settings | edit `config/` | re-run setup, copy the printed command |
+| add my own MCP server | code in `mcp/<name>/` (deps inline, `uv run --script`) + `[mcp.<name>]` in `upstreams.toml` | re-run setup, paste the printed command |
+| use a team repo's MCP server | add `[mcp.<name>]` to `upstreams.toml` | re-run setup, paste the printed command |
+| follow another team repo | add `[upstream.<name>]` to `upstreams.toml` | re-run setup |
+| add an alias / shell function | new or existing `shell/<NN>-name.zsh` (loaded in name order) | new terminal |
+| add a token | `.env` (+ the name in `.env.example`), use as `${VAR}` in MCP config | new terminal, re-run setup |
+| add a machine-only PATH | `~/.zshrc` / `~/.zprofile` (outside git) | new terminal |
 
 Removing a key from `config/*settings.json` does **not** remove it from your settings. Delete it there by hand.
