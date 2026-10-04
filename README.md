@@ -52,6 +52,7 @@ Open Claude Code in any project. The plugin is enabled for all of them:
 /am-plr:engine-iap-port         port an iOS in-app purchase test to macOS / UWP
 /am-plr:prompt-writer           turn a rough idea into a good prompt
 /am-plr:plan                    write a plan for a change (plan mode, code/python rules)
+/am-plr:plan-review             review a plan: major issues only, as questions with proposed fixes
 ```
 
 Claude also picks them up automatically from their descriptions. Team skills keep their own names
