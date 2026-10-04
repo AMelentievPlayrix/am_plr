@@ -9,6 +9,10 @@
         "PYTHONPATH": "/Users/playrix/projects/vso-engine-autotests"
       }
     },
+    "asana": {
+      "type": "sse",
+      "url": "https://mcp.asana.com/sse"
+    },
     "teamcity": {
       "command": "/Users/playrix/projects/perfect-project/cats2/.venv/bin/python",
       "args": [
