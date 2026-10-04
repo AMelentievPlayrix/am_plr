@@ -5,7 +5,7 @@ It sits **on top of** team repos (perfect-project, vso-engine-autotests) and nev
 
 ## Setup, step by step
 
-1. **Tokens and shell** (first time on a machine):
+1. **Tokens and shell** (first time on a machine; needs [uv](https://docs.astral.sh/uv/)):
    ```bash
    cp ~/projects/am_plr/.env.example ~/projects/am_plr/.env      # fill in tokens; .env is git-ignored
    echo 'source ~/projects/am_plr/shell/init.zsh' >> ~/.zshrc   # exports .env + loads aliases/prompt
@@ -28,7 +28,6 @@ It sits **on top of** team repos (perfect-project, vso-engine-autotests) and nev
 |---------------------------------------------------------------------------|----------------------------------------------|
 | My skills / agents available in every project                             | symlinks in `~/.claude/skills`, `~/.claude/agents` |
 | My rules (`rules/*.md`) loaded in every project                            | symlink `~/.claude/rules/am_plr`             |
-| Python venv for my own MCP servers                                        | `am_plr/.venv`                               |
 | MCP config generated                                                      | `artifacts/generated/mcp.json`               |
 | Claude Code / VS Code user settings generated (yours + am_plr keys)       | `artifacts/generated/{claude,vscode}-settings.json` |
 
@@ -40,13 +39,13 @@ Setup only generates files in `artifacts/generated/` and prints how to apply the
 ```
 skills/am-<name>/SKILL.md       my skills (always am- prefix) -> every project
 agents/<name>.md                my subagents           -> every project
-rules/*.md                      my rules (Claude reads only .md; `paths:` frontmatter to scope)
-mcp/<name>/                     my MCP servers: server.py (+ requirements.txt, config.json)
+rules/*.md                      my rules, loaded in every session (`paths:` frontmatter to scope)
+mcp/<name>/                     code of my own MCP servers (configured in upstreams.toml)
 config/claude/settings.json     model, effort, permissions I want everywhere
 config/vscode/settings.json     editor settings I want everywhere (autosave, 120 ruler, terminal, Python)
 shell/*.zsh                     aliases, functions, prompt; all loaded by shell/init.zsh (sourced from ~/.zshrc)
 .env                            all tokens, git-ignored (template: .env.example); exported by shell/init.zsh
-upstreams.toml                  team repos I follow + their MCP servers
+upstreams.toml                  team repos I follow + all MCP servers (theirs and mine)
 ```
 
 ## How conflicts are avoided
@@ -65,7 +64,7 @@ upstreams.toml                  team repos I follow + their MCP servers
 | edit a skill / rule               | just edit it                                             | no            |
 | add / rename / delete a skill or agent | change `skills/am-<name>/` or `agents/`           | yes           |
 | change editor / Claude settings    | edit `config/`                                           | yes, then copy the printed command |
-| add my own MCP server              | `mcp/<name>/server.py` (+ `requirements.txt`)            | yes, then copy the printed command |
+| add my own MCP server              | code in `mcp/<name>/` (deps inline, run with `uv run --script`) + `[mcp.<name>]` in `upstreams.toml` | yes, then copy the printed command |
 | use a team repo's MCP server       | add `[mcp.<name>]` to `upstreams.toml`                   | yes, then copy the printed command |
 | follow another team repo           | add `[upstream.<name>]` to `upstreams.toml`              | yes           |
 | add an alias / shell function      | new or existing `shell/<NN>-name.zsh` (loaded in name order) | no, open a new terminal |

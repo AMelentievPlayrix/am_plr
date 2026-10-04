@@ -13,14 +13,14 @@ path = "~/projects/perfect-project"
 path = "~/projects/vso-engine-autotests"
 
 # ---------------------------------------------------------------------------------------
-# MCP servers taken from upstream repos (they run from the upstream venv, not am_plr's).
-# Server names are what skills call as mcp__<name>__<tool>; keep them equal to upstream.
+# MCP servers: every [mcp.<name>] block becomes one entry in artifacts/generated/mcp.json.
+# Server names are what skills call as mcp__<name>__<tool>; keep upstream ones equal to upstream.
 #
-# Placeholders: ${root} = upstream path, ${AM_PLR} = this repo, ${AM_PLR_PYTHON} = .venv python,
-# Any other ${VAR} (tokens) is left as-is; Claude Code expands it at runtime from the env, which
-# shell/init.zsh fills from am_plr/.env. Setup warns about any ${VAR} that is empty in .env.
-# enabled = false -> skip;  manual = "..." -> can't be expressed as JSON, print instructions;
-# install = "..." -> hint printed while `command` does not exist yet.
+#   from = "<upstream>"  server lives in that repo (${root} = its path); omit for our own (mcp/<name>/)
+#   ${root}, ${AM_PLR}, ${HOME} are filled in by setup. Any other ${VAR} (tokens) stays as-is and
+#   Claude Code expands it at runtime from the env (shell/init.zsh loads am_plr/.env).
+#   manual = "..."   can't be expressed as JSON -> print these instructions instead
+#   install = "..."  hint printed while `command` does not exist yet
 
 [mcp.qase]
 # cats2 qase is a superset of vso-engine-autotests/ai/mcp_servers/qase (5 tools vs 1)
@@ -56,3 +56,8 @@ install = "download the darwin_arm64 binary from https://github.com/reportportal
 command = "${HOME}/reportportal-mcp-server/reportportal-mcp-server"
 args = ["stdio"]
 env = { RP_API_TOKEN = "${RP_API_TOKEN}", RP_HOST = "https://qa-reportportal.local.playrix.com", RP_PROJECT = "VSO" }
+
+[mcp.grafana]
+command = "${HOME}/.local/bin/uvx"
+args = ["mcp-grafana", "-disable-write"]
+env = { GRAFANA_URL = "https://graphite.local.playrix.com", GRAFANA_SERVICE_ACCOUNT_TOKEN = "${GRAFANA_SERVICE_ACCOUNT_TOKEN}" }

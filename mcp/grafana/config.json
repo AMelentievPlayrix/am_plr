@@ -1,8 +1,0 @@
-{
-  "command": "${HOME}/.local/bin/uvx",
-  "args": ["mcp-grafana", "-disable-write"],
-  "env": {
-    "GRAFANA_URL": "https://graphite.local.playrix.com",
-    "GRAFANA_SERVICE_ACCOUNT_TOKEN": "${GRAFANA_SERVICE_ACCOUNT_TOKEN}"
-  }
-}

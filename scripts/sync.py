@@ -23,10 +23,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 CLAUDE_DIR = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
 CLAUDE_JSON = CLAUDE_DIR / ".claude.json" if os.environ.get("CLAUDE_CONFIG_DIR") else Path.home() / ".claude.json"
-VENV_PY = REPO / ".venv" / "bin" / "python"
 GEN_DIR = REPO / "artifacts" / "generated"
 MCP_JSON = GEN_DIR / "mcp.json"
-ENTRYPOINTS = ("server.py", "main.py", "__main__.py")
 VSCODE_USER_DIR = next((d for d in (Path.home() / "Library/Application Support/Code/User",  # macOS
                                     Path.home() / ".config/Code/User") if d.is_dir()), None)  # Linux
 
@@ -91,18 +89,13 @@ def load_config():
 
 
 def scan_upstream(root: Path):
-    """What Claude Code loads from this repo at project scope."""
-    skills, agents, mcp = {}, {}, set()
+    """Skill and agent names Claude Code loads from this repo at project scope."""
+    skills = {}
     for d in sorted((root / ".claude" / "skills").glob("*/SKILL.md")):
         skills[frontmatter_name(d) or d.parent.name] = d.parent
         skills.setdefault(d.parent.name, d.parent)
-    for f in sorted((root / ".claude" / "agents").glob("*.md")):
-        agents[frontmatter_name(f) or f.stem] = f
-    try:
-        mcp = set(json.loads((root / ".mcp.json").read_text()).get("mcpServers", {}))
-    except (OSError, json.JSONDecodeError):
-        pass
-    return skills, agents, mcp
+    agents = {frontmatter_name(f) or f.stem: f for f in sorted((root / ".claude" / "agents").glob("*.md"))}
+    return skills, agents
 
 
 # ----------------------------------------------------------------------------- linking
@@ -219,43 +212,24 @@ def sync_rules():
         ok(f"{target} -> {src}")
     n = sum(1 for p in src.rglob("*.md") if visible(p))
     info(f"{n} rule file(s); new/deleted rule files are picked up without re-running setup")
-    mdc = sorted(p.relative_to(src) for p in src.rglob("*.mdc"))
-    if mdc:
-        warn(f"{len(mdc)} .mdc rule(s) are ignored by Claude Code, which loads only *.md "
-             f"(frontmatter `paths:` instead of `globs:`/`alwaysApply`): {', '.join(map(str, mdc))}")
 
 
 # ----------------------------------------------------------------------------- settings
 
 def read_jsonc(path: Path):
-    """(data, had_comments). JSONC = JSON + // and /* */ comments + trailing commas."""
+    """(data, had_comments). VS Code settings allow // and /* */ comments and trailing commas."""
     text = path.read_text(encoding="utf-8")
-    out, i, in_str, comments = [], 0, False, False
-    while i < len(text):
-        c = text[i]
-        if in_str:
-            out.append(c)
-            if c == "\\":
-                out.append(text[i + 1])
-                i += 1
-            elif c == '"':
-                in_str = False
-        elif c == '"':
-            in_str = True
-            out.append(c)
-        elif text.startswith("//", i):
-            comments = True
-            i = text.find("\n", i)
-            i = len(text) if i < 0 else i
-            continue
-        elif text.startswith("/*", i):
-            comments = True
-            i = text.index("*/", i) + 2
-            continue
-        else:
-            out.append(c)
-        i += 1
-    clean = re.sub(r",(\s*[}\]])", r"\1", "".join(out))
+    comments = False
+
+    def drop(m):  # strings are matched first, so comment-like text inside them survives
+        nonlocal comments
+        tok = m.group(0)
+        if tok.startswith('"'):
+            return tok
+        comments = comments or tok.startswith("/")
+        return ""
+
+    clean = re.sub(r'"(?:\\.|[^"\\])*"|//[^\n]*|/\*.*?\*/|,(?=\s*[}\]])', drop, text, flags=re.S)
     return (json.loads(clean) if clean.strip() else {}), comments
 
 
@@ -313,31 +287,17 @@ def sync_settings():
     return [p for p in previews if p]
 
 
-def load_dotenv():
-    """Keys set in am_plr/.env (git-ignored; also exported to the shell by shell/init.zsh)."""
-    f = REPO / ".env"
-    if not f.is_file():
-        return set()
-    keys = set()
-    for line in f.read_text().splitlines():
-        m = re.match(r"\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)", line)
-        if m and m.group(2).strip().strip("'\""):
-            keys.add(m.group(1))
-    return keys
-
-
 def check_secrets(servers):
-    """Every ${VAR} used by generated MCP config must be set in .env (or already in the shell env)."""
+    """Every ${VAR} used by the MCP config must be set; setup.sh loads am_plr/.env into the env first."""
     env_file, example = REPO / ".env", REPO / ".env.example"
     needed = {v: n for n, s in servers.items() for v in env_refs(s)}
     if not env_file.exists():
         warn(f"{env_file} missing: cp {example} {env_file}  # then fill in tokens")
         return
-    have = load_dotenv()
-    for var, server in sorted(needed.items()):
-        if var not in have and not os.environ.get(var):
-            warn(f"{var} (mcp '{server}') is empty in {env_file}")
-    if needed and not (set(needed) - have):
+    missing = sorted(v for v in needed if not os.environ.get(v))
+    for var in missing:
+        warn(f"{var} (mcp '{needed[var]}') is empty in {env_file}")
+    if needed and not missing:
         info(f"all {len(needed)} MCP token(s) set in {env_file}")
 
 
@@ -370,15 +330,14 @@ def print_settings_instructions(previews):
 # ----------------------------------------------------------------------------- mcp
 
 def subst(v, root=None):
-    """Fill am_plr placeholders. Other ${VAR} (tokens) stay as-is: Claude Code expands them at runtime."""
+    """Fill ${root} / ${AM_PLR} / ${HOME}. Token ${VAR}s stay as-is: Claude Code expands them at runtime."""
     if isinstance(v, list):
         return [subst(x, root) for x in v]
     if isinstance(v, dict):
         return {k: subst(x, root) for k, x in v.items()}
     if not isinstance(v, str):
         return v
-    v = v.replace("${AM_PLR_PYTHON}", str(VENV_PY)).replace("${AM_PLR}", str(REPO))
-    v = v.replace("${HOME}", str(Path.home()))
+    v = v.replace("${AM_PLR}", str(REPO)).replace("${HOME}", str(Path.home()))
     return v.replace("${root}", str(root)) if root is not None else v
 
 
@@ -386,72 +345,36 @@ def env_refs(server):
     return sorted(set(re.findall(r"\$\{([A-Za-z_][A-Za-z0-9_]*)", json.dumps(server))))
 
 
-def finalize(server):
-    server = {"type": "http" if "url" in server else "stdio", **server}
-    if server.get("env") == {}:
-        del server["env"]
-    return server
+def build_mcp(upstreams, mcp_specs):
+    """Every [mcp.<name>] block in upstreams.toml -> one entry in artifacts/generated/mcp.json.
 
-
-def build_mcp(upstreams, upstream_mcp, upstream_project_mcp):
-    servers, origin, manual = {}, {}, {}
-
-    for name, spec in upstream_mcp.items():
+    `from = "<upstream>"` makes ${root} that repo's path; without it the server is our own (code in mcp/).
+    `manual = "..."` prints instructions instead; `install = "..."` is a hint while `command` is missing.
+    """
+    servers, manual = {}, {}
+    for name, spec in mcp_specs.items():
         spec = dict(spec)
-        if not spec.pop("enabled", True):
-            info(f"mcp '{name}' disabled in upstreams.toml")
-            continue
         src = spec.pop("from", None)
-        root = upstreams.get(src)
-        if src and (root is None or not root.is_dir()):
+        root = upstreams.get(src) if src else REPO
+        if root is None or not root.is_dir():
             warn(f"mcp '{name}' skipped: upstream '{src}' not found ({root})")
             continue
         if "manual" in spec:
-            manual[name] = (src, subst(spec["manual"], root))
+            manual[name] = (src or "am_plr", subst(spec["manual"], root))
+            info(f"mcp '{name}' needs manual setup, see below")
             continue
-        server = finalize(subst({k: v for k, v in spec.items() if k != "install"}, root))
+        install = spec.pop("install", None)
+        server = {"type": "http" if "url" in spec else "stdio", **subst(spec, root)}
         cmd = server.get("command", "")
         if cmd.startswith("/") and not Path(cmd).exists():
-            hint = spec.get("install") or f"set up the {src} venv, e.g. `uv sync` there"
+            hint = install or (f"set up the {src} venv, e.g. `uv sync` there" if src else "install it")
             warn(f"mcp '{name}': {cmd} does not exist yet ({hint})")
-        servers[name], origin[name] = server, f"upstream {src}"
-
-    mcp_dir = REPO / "mcp"
-    for d in sorted(p for p in mcp_dir.iterdir() if p.is_dir() and visible(p)) if mcp_dir.is_dir() else []:
-        cfg = {}
-        if (d / "config.json").is_file():
-            try:
-                cfg = json.loads((d / "config.json").read_text())
-            except json.JSONDecodeError as e:
-                warn(f"mcp '{d.name}' skipped: bad config.json ({e})")
-                continue
-        if cfg.pop("disabled", False):
-            info(f"mcp '{d.name}' disabled in config.json")
-            continue
-        name = cfg.pop("name", d.name)
-        if name in servers or name in manual:
-            warn(f"mcp '{name}' (am_plr/mcp/{d.name}) skipped: name taken by upstream - rename it")
-            continue
-        entry = next((d / e for e in ENTRYPOINTS + (f"{d.name}.py",) if (d / e).is_file()), None)
-        server = {"command": str(VENV_PY), "args": [str(entry)]} if entry else {}
-        server.update(subst(cfg))
-        if "command" not in server and "url" not in server:
-            warn(f"mcp '{d.name}' skipped: no {'/'.join(ENTRYPOINTS)} and no command/url in config.json")
-            continue
-        servers[name], origin[name] = finalize(server), "am_plr"
-        manual.pop(name, None)
+        servers[name] = server
+        refs = env_refs(server)
+        ok(f"mcp '{name}' ({src or 'am_plr'})" + (f" - token(s) from .env: {', '.join(refs)}" if refs else ""))
 
     GEN_DIR.mkdir(parents=True, exist_ok=True)
     MCP_JSON.write_text(json.dumps({"mcpServers": servers}, indent=2) + "\n")
-    for n in servers:
-        refs = env_refs(servers[n])
-        ok(f"mcp '{n}' ({origin[n]})" + (f" - token(s) from .env: {', '.join(refs)}" if refs else ""))
-    for n, (src, _) in manual.items():
-        info(f"mcp '{n}' (upstream {src}) needs manual setup, see below")
-    for n in servers:
-        for repo_name, names in upstream_project_mcp.items():
-            if n in names:
-                info(f"mcp '{n}': {repo_name}/.mcp.json also defines it - that one wins inside {repo_name}")
     return servers, manual
 
 
@@ -468,9 +391,7 @@ def check_skill_mcp_refs(servers, manual, extra_dirs):
         for f in skill_dir.rglob("*.md"):
             refs |= set(re.findall(r"mcp__([A-Za-z0-9_-]+?)__", f.read_text(encoding="utf-8", errors="ignore")))
         for r in sorted(refs - known):
-            close = [k for k in known if r in k or k in r]
-            hint = f" (did you mean '{close[0]}'?)" if close else ""
-            warn(f"skill '{skill_dir.name}' calls mcp__{r}__* but no MCP server '{r}' is configured{hint}")
+            warn(f"skill '{skill_dir.name}' calls mcp__{r}__* but no MCP server '{r}' is configured")
 
 
 def print_mcp_instructions(servers, manual):
@@ -531,19 +452,17 @@ def main():
     upstreams, upstream_mcp = load_config()
 
     step("Upstream repos (upstreams.toml)")
-    up_skills, up_agents, up_mcp = {}, {}, {}
+    up_skills, up_agents = {}, {}
     for name, root in upstreams.items():
         if not root.is_dir():
             warn(f"upstream '{name}': {root} not found - its MCP servers are skipped")
             continue
-        s, a, m = scan_upstream(root)
+        s, a = scan_upstream(root)
         for k in s:
             up_skills.setdefault(k, f"{name}/.claude/skills")
         for k in a:
             up_agents.setdefault(k, f"{name}/.claude/agents")
-        up_mcp[name] = m
-        ok(f"{name}: {root} ({len(set(p for p in s.values()))} skills, {len(a)} agents"
-           f"{f', .mcp.json: {len(m)} servers' if m else ''})")
+        ok(f"{name}: {root} ({len(set(s.values()))} skills, {len(a)} agents)")
 
     skills = {}
     for d in sorted((REPO / "skills").iterdir()) if (REPO / "skills").is_dir() else []:
@@ -574,7 +493,7 @@ def main():
     shell_line = check_shell()
 
     step(f"MCP -> {MCP_JSON}")
-    servers, manual = build_mcp(upstreams, upstream_mcp, up_mcp)
+    servers, manual = build_mcp(upstreams, upstream_mcp)
     check_secrets(servers)
     check_skill_mcp_refs(servers, manual, [src for src, _ in skills.values()])
 
