@@ -207,6 +207,8 @@ def check_secrets(servers):
     """Every ${VAR} used by the MCP config must be set; setup.sh loads am_plr/.env into the env first."""
     env_file, example = REPO / ".env", REPO / ".env.example"
     needed = {v: n for n, s in servers.items() for v in env_refs(s)}
+    if not needed:
+        return
     if not env_file.exists():
         warn(f"{env_file} missing")
         todo.append(("Create .env with your tokens (git-ignored)", [f"cp {example} {env_file}  # then fill it in"]))
@@ -309,6 +311,8 @@ def mcp_todo(servers):
         current = {}
     strip = lambda s: {k: v for k, v in s.items() if k != "type"}
     todo_names = [n for n in servers if strip(current.get(n, {})) != strip(servers[n])]
+    if not servers:
+        info("no own MCP servers yet (add [mcp.<name>] blocks to upstreams.toml)")
     for n in servers:
         print(f"    {n}: " + (f"{Y}to add / update{N}" if n in todo_names else f"{D}in sync{N}"))
     if todo_names:

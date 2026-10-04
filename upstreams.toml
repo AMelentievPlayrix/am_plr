@@ -18,14 +18,14 @@ path = "~/projects/perfect-project"
 path = "~/projects/vso-engine-autotests"
 
 # ---------------------------------------------------------------------------------------
-# My own MCP servers: each [mcp.<name>] block becomes one entry in artifacts/generated/mcp.json.
-# Code for servers I write lives in mcp/<name>/.
+# My own MCP servers (none yet): each [mcp.<name>] block becomes one entry in
+# artifacts/generated/mcp.json. Code for servers I write lives in mcp/<name>/. Example:
+#
+#   [mcp.my-server]
+#   command = "uv"
+#   args = ["run", "--script", "${AM_PLR}/mcp/my-server/server.py"]
+#   env = { MY_TOKEN = "${MY_TOKEN}" }
 #
 #   ${AM_PLR}, ${HOME} are filled in by setup. Any other ${VAR} (tokens) stays as-is and Claude Code
 #   expands it at runtime from the env (shell/init.zsh loads am_plr/.env).
 #   install = "..."  hint printed while `command` does not exist yet
-
-[mcp.grafana]
-command = "${HOME}/.local/bin/uvx"
-args = ["mcp-grafana", "-disable-write"]
-env = { GRAFANA_URL = "https://graphite.local.playrix.com", GRAFANA_SERVICE_ACCOUNT_TOKEN = "${GRAFANA_SERVICE_ACCOUNT_TOKEN}" }

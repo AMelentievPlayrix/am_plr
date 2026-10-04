@@ -15,7 +15,7 @@ Needs [uv](https://docs.astral.sh/uv/) and `jq`.
    ~/projects/am_plr/scripts/setup.sh
    ```
 2. **Do the "Next steps" it prints at the end.** Only what's still missing is listed, in order:
-   - create `.env` from `.env.example` and fill in the tokens (git-ignored);
+   - create `.env` from `.env.example` and fill in the tokens (git-ignored), once you have own MCP servers that need them;
    - add `source ~/projects/am_plr/shell/init.zsh` to `~/.zshrc` (loads tokens, aliases, prompt);
    - install the plugin: in Claude Code run `/plugin marketplace add ~/projects/am_plr`, then `/plugin install am-plr@am-plr`;
    - copy my MCP servers from `artifacts/generated/mcp.json` into `"mcpServers"` of `~/.claude.json`
@@ -67,7 +67,7 @@ upstreams.toml                  team repos I follow, my own MCP servers, links t
 config/claude/settings.json     model, effort, permissions I want everywhere
 config/vscode/settings.json     editor settings I want everywhere (autosave, 120 ruler, terminal, Python)
 shell/*.zsh                     aliases, functions, prompt; loaded by shell/init.zsh (sourced from ~/.zshrc)
-.env                            all tokens, git-ignored (template: .env.example); loaded by shell/init.zsh
+.env                            tokens for my own MCP servers, git-ignored (template: .env.example); loaded by shell/init.zsh
 workspaces/*.code-workspace     VS Code multi-folder workspaces
 ```
 
