@@ -109,7 +109,7 @@ timing, locator, isolation or data is what is wrong.
 
 ## Forbidden fixes and stop conditions
 
-Both live in [delivery.md](../../am-engine-create-autotest/reference/delivery.md)
+Both live in [delivery.md](../../engine-create-autotest/reference/delivery.md)
 § Validation and run budget.
 
 ---

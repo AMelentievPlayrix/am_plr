@@ -1,0 +1,12 @@
+{
+  "name": "am-plr",
+  "description": "Local marketplace for the am_plr plugin (this repo)",
+  "owner": { "name": "Anton Melentiev" },
+  "plugins": [
+    {
+      "name": "am-plr",
+      "source": "./",
+      "description": "Personal skills layered on top of team repos"
+    }
+  ]
+}

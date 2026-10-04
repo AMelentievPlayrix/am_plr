@@ -1,5 +1,5 @@
 ---
-name: am-engine-create-autotest
+name: engine-create-autotest
 description: Create a new VSO engine autotest from a Qase test case — read the case over Qase MCP, implement it against existing steps, validate it on every applicable platform, open a pull request, and post a summary comment to Asana. Use for "automate VSO-12345", "write an autotest for Qase case 12345".
 disable-model-invocation: true
 ---
@@ -20,7 +20,7 @@ structure, steps, platform logic, tagging and SDK-specific behaviour.
 
 ## Do not use this when
 
-- An existing test is broken and must be repaired → use `/am-engine-fix-autotest`.
+- An existing test is broken and must be repaired → use `/am-plr:engine-fix-autotest`.
 - The work is pure framework/steps refactoring with no new test.
 - The request needs a product-code change rather than test automation.
 
@@ -87,7 +87,7 @@ When the budget is exhausted or a stop condition fires, use the halt report in
 
 Add the validation results to the test file as the project's other tests do
 (platform, date, outcome). Run `make code-style-check` and fix what it reports.
-Commit this on its own via `am-commit`.
+Commit this on its own via `am-plr:commit`.
 
 ### 7. Open the pull request
 
@@ -120,5 +120,5 @@ State plainly whether `.env` was restored and whether the case is fully covered.
 - Do not invent a step, locator, tag or UI flow that you have not confirmed in code.
 - Do not skip validation on an applicable platform without the user's explicit say-so.
 - Do not report a test as done before a green run with the platform's own marker.
-- Everything in the `am-commit` skill's Constraints (no `.env`/secrets, no rewriting history) and the
+- Everything in the `am-plr:commit` skill's Constraints (no `.env`/secrets, no rewriting history) and the
   writing rule's Asana section (comment only; never close or reassign the task).

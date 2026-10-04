@@ -1,5 +1,5 @@
 ---
-name: am-describe-work
+name: describe-work
 description: File an Asana task for a set of code changes, open a matching GitHub PR, and cross-link both. Use when asked to "describe the work", "write up these changes", or close out a change with a task+PR pair.
 disable-model-invocation: true
 argument-hint: "[optional: which changes/diff to describe]"
@@ -33,11 +33,11 @@ If it's ambiguous which part of the changes the task/PR should cover — e.g. th
 
 ### 2) Commit any uncommitted changes
 
-If `git status` shows uncommitted changes in the scope identified in step 1, call the **`am-commit`** skill yourself (via the Skill tool, `skill: "am-commit"`) on that scope before continuing — do this directly, don't ask the user to run `/am-commit` themselves and don't hand-roll a single commit here instead. The `am-commit` skill splits the changes into logical, reviewable commits.
+If `git status` shows uncommitted changes in the scope identified in step 1, call the **`am-plr:commit`** skill yourself (via the Skill tool, `skill: "am-plr:commit"`) on that scope before continuing — do this directly, don't ask the user to run `/am-plr:commit` themselves and don't hand-roll a single commit here instead. The `am-plr:commit` skill splits the changes into logical, reviewable commits.
 
-(If working on `master`/`main`, create a feature branch — following the repo's existing naming convention if visible in recent branches — *before* invoking `am-commit`, so the commits land on a branch, not on `master`.)
+(If working on `master`/`main`, create a feature branch — following the repo's existing naming convention if visible in recent branches — *before* invoking `am-plr:commit`, so the commits land on a branch, not on `master`.)
 
-Once `am-commit` finishes, the branch's commit history is itself the most reliable source for what the diff contains — use `git log` on the new commits as input to step 3 rather than re-reading the raw working-tree diff.
+Once `am-plr:commit` finishes, the branch's commit history is itself the most reliable source for what the diff contains — use `git log` on the new commits as input to step 3 rather than re-reading the raw working-tree diff.
 
 ### 3) Write two descriptions — Asana looks forward, the PR looks back
 

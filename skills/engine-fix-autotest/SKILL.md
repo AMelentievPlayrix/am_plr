@@ -1,5 +1,5 @@
 ---
-name: am-engine-fix-autotest
+name: engine-fix-autotest
 description: Repair a broken VSO engine autotest starting from an Asana task link — pull the task and failure evidence over Asana MCP, check whether it is already fixed upstream, find the root cause, fix it, validate, open a pull request, and post a summary comment to Asana. Use for "test X is broken", "fix this failing autotest", or a bare Asana link to a test-failure task.
 disable-model-invocation: true
 ---
@@ -9,9 +9,9 @@ disable-model-invocation: true
 Repair an existing test: task → evidence → root cause → fix → validate → PR → report.
 
 Diagnosis method lives in [reference/diagnosis-playbook.md](reference/diagnosis-playbook.md).
-PR, Asana comment and halt-report templates live in [delivery.md](../am-engine-create-autotest/reference/delivery.md).
+PR, Asana comment and halt-report templates live in [delivery.md](../engine-create-autotest/reference/delivery.md).
 Authoring rules for any code you touch live in
-[../am-engine-create-autotest/reference/authoring-rules.md](../am-engine-create-autotest/reference/authoring-rules.md).
+[../engine-create-autotest/reference/authoring-rules.md](../engine-create-autotest/reference/authoring-rules.md).
 
 ## Use this when
 
@@ -21,7 +21,7 @@ Authoring rules for any code you touch live in
 
 ## Do not use this when
 
-- A brand-new test must be written from a Qase case → use `/am-engine-create-autotest`.
+- A brand-new test must be written from a Qase case → use `/am-plr:engine-create-autotest`.
 - The failure is an app defect and no test change is warranted — diagnose, then report it
   as a defect instead of weakening the test.
 
@@ -37,7 +37,7 @@ Do not start editing code from a task title alone. Get a real failure signature 
 
 ## MCP tools
 
-Qase, Asana, image and GitHub tools: [mcp-tools.md](../am-engine-create-autotest/reference/mcp-tools.md).
+Qase, Asana, image and GitHub tools: [mcp-tools.md](../engine-create-autotest/reference/mcp-tools.md).
 Use Qase when the test maps to a case, to confirm what the test is *supposed* to verify before changing
 any assertion. The Asana task gid is the last numeric segment of the URL.
 
@@ -90,7 +90,7 @@ wrong, do not weaken the test — report the defect.
 
 ### 5. Settle the branch before you touch code
 
-Follow [delivery.md](../am-engine-create-autotest/reference/delivery.md) § Branch (prefix `fix/`) before the first edit. PR and Asana conventions
+Follow [delivery.md](../engine-create-autotest/reference/delivery.md) § Branch (prefix `fix/`) before the first edit. PR and Asana conventions
 come from the rule [writing-git-github-asana.md](../../rules/writing-git-github-asana.md).
 
 ### 6. Fix
@@ -99,13 +99,13 @@ come from the rule [writing-git-github-asana.md](../../rules/writing-git-github-
 - Touch only files relevant to this failure.
 - Follow the authoring rules for any code you write.
 - Leave a short comment where the fix is non-obvious, explaining the cause — not the syntax.
-- No fix from [delivery.md](../am-engine-create-autotest/reference/delivery.md) § Forbidden fixes.
+- No fix from [delivery.md](../engine-create-autotest/reference/delivery.md) § Forbidden fixes.
 
-**Commit each cause on its own, as soon as it is fixed**, as [delivery.md](../am-engine-create-autotest/reference/delivery.md) § Commits describes.
+**Commit each cause on its own, as soon as it is fixed**, as [delivery.md](../engine-create-autotest/reference/delivery.md) § Commits describes.
 
 ### 7. Validate — 5 automatic runs per platform
 
-Follow [delivery.md](../am-engine-create-autotest/reference/delivery.md) § Validation and run budget (platforms, `.env`, budget, stop conditions).
+Follow [delivery.md](../engine-create-autotest/reference/delivery.md) § Validation and run budget (platforms, `.env`, budget, stop conditions).
 When the budget is exhausted or a stop condition fires, use its halt report and ask the user how
 to proceed.
 
@@ -113,17 +113,17 @@ Verify the fix was actually exercised. If the original failure only reproduces u
 conditions, say so plainly: a green local run then proves absence of regression, not the fix.
 
 Record the validation results where the project records them, and commit that separately
-via `am-commit`.
+via `am-plr:commit`.
 
 ### 8. Open the pull request
 
 Everything is already committed by now, so this step only pushes and opens.
-Follow [delivery.md](../am-engine-create-autotest/reference/delivery.md) § Pull request.
+Follow [delivery.md](../engine-create-autotest/reference/delivery.md) § Pull request.
 
 
 ### 9. Comment on Asana
 
-Follow [delivery.md](../am-engine-create-autotest/reference/delivery.md) § Asana comment. It must cover: the
+Follow [delivery.md](../engine-create-autotest/reference/delivery.md) § Asana comment. It must cover: the
 symptom, **how the cause was found** (which artifact and which log line was decisive — quote
 it), the root cause, what was changed and why that instead of a workaround, how it
 was validated, and links. Add anything worth a separate task under "Замечено попутно".
@@ -147,5 +147,5 @@ State plainly whether `.env` was restored and whether the working tree is clean.
 - Do not stabilise a failure you have not explained.
 - Do not weaken or delete an assertion to get green.
 - Do not disable, skip or xfail a test as the fix unless the user explicitly asks.
-- Everything in the `am-commit` skill's Constraints (no `.env`/secrets, no rewriting history) and the
+- Everything in the `am-plr:commit` skill's Constraints (no `.env`/secrets, no rewriting history) and the
   writing rule's Asana section (comment only; never close or reassign the task).

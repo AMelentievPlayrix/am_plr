@@ -1,0 +1,6 @@
+{
+  "name": "am-plr",
+  "displayName": "am_plr",
+  "description": "Personal skills (commit, describe-work, engine autotests, prompt-writer) layered on top of team repos",
+  "author": { "name": "Anton Melentiev" }
+}

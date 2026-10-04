@@ -1,6 +1,6 @@
 # MCP tools for engine autotests
 
-Shared by `/am-engine-create-autotest` and `/am-engine-fix-autotest`.
+Shared by `/am-plr:engine-create-autotest` and `/am-plr:engine-fix-autotest`.
 
 **Qase** — `mcp__qase__get_test_case_data(project_code="VSO", test_case_id=<id>)` reads a case:
 `title`, `description`, `preconditions`, `steps[]` (`action`, `expected_result`, `data`, nested `steps`),

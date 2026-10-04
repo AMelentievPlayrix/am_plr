@@ -1,6 +1,6 @@
 ---
-name: am-prompt-writer
-description: Turn a short, rough description typed in chat into a clear, well-structured prompt using prompt-engineering best practices, ready to paste into Claude (chat, Claude Code, a subagent, a skill or a system prompt). Use when asked to "write a prompt", "improve/enhance this prompt", "make this a better prompt", or /am-prompt-writer <rough idea>.
+name: prompt-writer
+description: Turn a short, rough description typed in chat into a clear, well-structured prompt using prompt-engineering best practices, ready to paste into Claude (chat, Claude Code, a subagent, a skill or a system prompt). Use when asked to "write a prompt", "improve/enhance this prompt", "make this a better prompt", or /am-plr:prompt-writer <rough idea>.
 argument-hint: "<rough description of what the prompt should make the model do>"
 ---
 

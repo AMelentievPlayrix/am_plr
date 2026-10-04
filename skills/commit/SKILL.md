@@ -1,5 +1,5 @@
 ---
-name: am-commit
+name: commit
 description: The single place for commit policy. Split the current uncommitted changes into several independent, logically-scoped commits instead of one big commit. Use when asked to "commit this", "commit in logical parts", or before opening a PR. Every other skill that needs to commit invokes this skill instead of committing itself.
 argument-hint: "[optional: paths/scope to commit, plus any project-specific split order]"
 ---
@@ -8,7 +8,7 @@ argument-hint: "[optional: paths/scope to commit, plus any project-specific spli
 
 Turn the current working-tree changes into a small series of commits, each one a coherent, independent logical unit, instead of a single commit with everything mixed together. The goal is reviewability: someone reading `git log -p` should be able to understand each change in isolation.
 
-This skill owns the commit policy. Other skills call it (Skill tool, `skill: "am-commit"`) with the paths to commit and, if they have one, a project-specific split order. Commit message language comes from the rule [writing-git-github-asana.md](../../rules/writing-git-github-asana.md) (Russian).
+This skill owns the commit policy. Other skills call it (Skill tool, `skill: "am-plr:commit"`) with the paths to commit and, if they have one, a project-specific split order. Commit message language comes from the rule [writing-git-github-asana.md](../../rules/writing-git-github-asana.md) (Russian).
 
 ## Procedure
 

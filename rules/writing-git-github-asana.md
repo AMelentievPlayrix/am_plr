@@ -2,7 +2,7 @@
 
 Applies to every commit message, pull request and Asana task or comment, whether or not a skill is
 running. Skills add task-specific details on top of this rule and do not repeat it.
-How to make commits lives in the `am-commit` skill; this rule only sets their language.
+How to make commits lives in the `am-plr:commit` skill; this rule only sets their language.
 
 ## Language
 
@@ -26,7 +26,7 @@ How to make commits lives in the `am-commit` skill; this rule only sets their la
 
 ## Commits
 
-Always commit through the `am-commit` skill (Skill tool, `skill: "am-commit"`, optionally with the paths
+Always commit through the `am-plr:commit` skill (Skill tool, `skill: "am-plr:commit"`, optionally with the paths
 to commit). It owns the commit policy: splitting, message format, staging and git safety.
 Do not hand-roll commits or restate that policy in other skills.
 

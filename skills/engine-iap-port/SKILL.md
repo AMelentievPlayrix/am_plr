@@ -1,5 +1,5 @@
 ---
-name: am-engine-iap-port
+name: engine-iap-port
 description: Port an existing iOS in-app purchase autotest in vso-engine-autotests to macOS or UWP — first plan (read-only), then implement and validate the planned variant. Use for "add a macOS/UWP variant of IAP test 10559", "port purchase test to UWP".
 disable-model-invocation: true
 argument-hint: "<plan|implement> <macos|uwp> <test id>"
@@ -19,9 +19,9 @@ reference file exactly.
 
 Shared rules that apply on top of the reference file:
 
-- Test code follows [authoring-rules.md](../am-engine-create-autotest/reference/authoring-rules.md)
+- Test code follows [authoring-rules.md](../engine-create-autotest/reference/authoring-rules.md)
   § In-app purchase.
 - The validation run limit in the reference files is 3 attempts; that is intentional for this
   narrow, plan-driven change and overrides the 5-run budget of the other engine skills.
-- Commits go through the `am-commit` skill; PR and Asana conventions come from
+- Commits go through the `am-plr:commit` skill; PR and Asana conventions come from
   [writing-git-github-asana.md](../../rules/writing-git-github-asana.md).

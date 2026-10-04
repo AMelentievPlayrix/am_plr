@@ -1,10 +1,10 @@
 # Delivery: branch, commits, pull request, Asana comment, halt report
 
-Applies to both `/am-engine-create-autotest` and `/am-engine-fix-autotest`.
+Applies to both `/am-plr:engine-create-autotest` and `/am-plr:engine-fix-autotest`.
 
 Language, the generic PR body and Asana formatting come from the rule
 [writing-git-github-asana.md](../../../rules/writing-git-github-asana.md). Every commit goes through
-the `am-commit` skill. This file adds only what is specific to vso-engine-autotests.
+the `am-plr:commit` skill. This file adds only what is specific to vso-engine-autotests.
 
 ---
 
@@ -55,7 +55,7 @@ in-flight work.
 
 ## Commits — as you go, split like this
 
-**Commit each finished piece of work when it is finished** by calling the `am-commit` skill
+**Commit each finished piece of work when it is finished** by calling the `am-plr:commit` skill
 with that piece's paths, this split order and `make code-style-check` as the pre-commit check.
 Do not accumulate everything into one commit at the end.
 
