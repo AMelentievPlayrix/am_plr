@@ -250,8 +250,7 @@ def test_XXX_simple_purchase_uwp(step):
   suitable explicit wait exists.
 - A long `sleep` or a noticeably raised timeout means the cause is not yet understood —
   record it as a risk or a blocker instead of shipping it.
-- Forbidden as stabilisers: broad `except`, silent action repeats, "loop until it works",
-  random fallback paths.
+- Forbidden stabilisers: see [delivery.md](delivery.md) § Forbidden fixes.
 
 ## Branching
 

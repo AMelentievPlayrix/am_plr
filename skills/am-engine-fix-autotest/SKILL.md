@@ -37,19 +37,9 @@ Do not start editing code from a task title alone. Get a real failure signature 
 
 ## MCP tools
 
-**Asana** — `mcp__asana__asana_get_task(task_id=<gid>)` returns notes and comments together;
-`asana_get_stories_for_task` for the full activity trail;
-`asana_get_attachments_for_object` for screenshots and logs;
-`asana_create_task_story` to post the final comment.
-The gid is the last numeric segment of the Asana URL.
-
-**Qase** — `mcp__qase__get_test_case_data(project_code="VSO", test_case_id=<id>)` when the
-test maps to a case. Use it to confirm what the test is *supposed* to verify before changing
-any assertion. It returns no attachments and no linked-task fields.
-
-**Images** — `mcp__cats__read_image(source=<path or url>)` for screenshots from Asana.
-Ignore every other `mcp__cats__*` tool: they drive the VSO Editor in `perfect-project`.
-
+Qase, Asana, image and GitHub tools: [mcp-tools.md](../am-engine-create-autotest/reference/mcp-tools.md).
+Use Qase when the test maps to a case, to confirm what the test is *supposed* to verify before changing
+any assertion. The Asana task gid is the last numeric segment of the URL.
 
 ## Workflow
 
@@ -100,25 +90,8 @@ wrong, do not weaken the test — report the defect.
 
 ### 5. Settle the branch before you touch code
 
-Commits happen **as you work**, not in one lump at the end, so the branch must be settled
-first. A branch for this task may already exist — check before creating one.
-
-```bash
-git branch --show-current
-git status --porcelain                       # what is already dirty is the user's work
-git log --oneline origin/master..HEAD        # what the current branch already carries
-```
-
-- **On `master` or detached HEAD** → create it yourself:
-  `git switch -c fix/<initials>/test_<case_id>_<short_slug> origin/master`
-- **Already on another branch** → **ask with `AskUserQuestion`**: use the current branch, or
-  create a new one from `origin/master`. Show the branch name, how many commits it is ahead
-  and what they are. Do not decide this yourself, even when the branch name looks like it
-  belongs to this task.
-
-Read [delivery.md](../am-engine-create-autotest/reference/delivery.md) § Branch and § Commits before the first
-edit, and the rule [writing-git-github-asana.md](../../rules/writing-git-github-asana.md) for
-PR and Asana conventions. Every commit goes through the `am-commit` skill.
+Follow [delivery.md](../am-engine-create-autotest/reference/delivery.md) § Branch (prefix `fix/`) before the first edit. PR and Asana conventions
+come from the rule [writing-git-github-asana.md](../../rules/writing-git-github-asana.md).
 
 ### 6. Fix
 
@@ -126,36 +99,15 @@ PR and Asana conventions. Every commit goes through the `am-commit` skill.
 - Touch only files relevant to this failure.
 - Follow the authoring rules for any code you write.
 - Leave a short comment where the fix is non-obvious, explaining the cause — not the syntax.
-- Never fix by raising a timeout, adding a `sleep`, adding a retry, broadening an `except`,
-  or weakening an assertion. Each of those hides the failure rather than repairing it.
+- No fix from [delivery.md](../am-engine-create-autotest/reference/delivery.md) § Forbidden fixes.
 
-**Commit each cause on its own, as soon as it is fixed**: call the `am-commit` skill (Skill tool, `skill: "am-commit"`) with the
-fixed paths, the split order from [delivery.md](../am-engine-create-autotest/reference/delivery.md)
-§ Commits, and `make code-style-check` as the pre-commit check.
+**Commit each cause on its own, as soon as it is fixed**, as [delivery.md](../am-engine-create-autotest/reference/delivery.md) § Commits describes.
 
 ### 7. Validate — 5 automatic runs per platform
 
-```bash
-make ai-run-tests key=<test_name> platform_to_run=<PLATFORM_TAG>
-```
-
-Platforms: `iOS` and `Android` always (BrowserStack); `macOS`, `android_on_linux`,
-`ios_on_linux` only on a macOS host; `Windows`, `UWP` only on a Windows host. Switch platform
-by editing the `# App config` block in `.env`, and **restore `.env` afterwards** — including
-when you stop early. `.env` is never committed.
-
-You get **at most 5 automatic runs per platform**. Diagnose before each rerun; never rerun
-unchanged. Commit each follow-up fix (via `am-commit`) right after the run that justified it, so the history
-shows the sequence of hypotheses rather than one opaque final state. Stop before 5 when the
-same failure repeats with no new hypothesis, the failure is infrastructure, a required element
-cannot be confirmed, the cause looks like a product defect, or the remaining fix would become
-a refactor.
-
-When the budget is exhausted or a stop condition fires, commit whatever is finished and worth
-keeping, then **halt** and use the halt-report template in
-[delivery.md](../am-engine-create-autotest/reference/delivery.md): what was found, what was changed, what was
-tried, what remains unclear. Then ask the user whether to continue and how many additional runs
-to allow. Do not silently continue.
+Follow [delivery.md](../am-engine-create-autotest/reference/delivery.md) § Validation and run budget (platforms, `.env`, budget, stop conditions).
+When the budget is exhausted or a stop condition fires, use its halt report and ask the user how
+to proceed.
 
 Verify the fix was actually exercised. If the original failure only reproduces under CI
 conditions, say so plainly: a green local run then proves absence of regression, not the fix.
@@ -195,4 +147,5 @@ State plainly whether `.env` was restored and whether the working tree is clean.
 - Do not stabilise a failure you have not explained.
 - Do not weaken or delete an assertion to get green.
 - Do not disable, skip or xfail a test as the fix unless the user explicitly asks.
-- Everything in the writing rule's git safety section (no `.env`, no rewriting history, comment-only on Asana).
+- Everything in the `am-commit` skill's Constraints (no `.env`/secrets, no rewriting history) and the
+  writing rule's Asana section (comment only; never close or reassign the task).

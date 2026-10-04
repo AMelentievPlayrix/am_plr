@@ -79,6 +79,65 @@ Never mix a framework change and a test change in one commit.
 
 ---
 
+## Validation and run budget
+
+Validate on every applicable platform unless the user says skip:
+
+| Platform tag | When |
+|---|---|
+| `iOS`, `Android` | Always (runs on BrowserStack) |
+| `macOS`, `android_on_linux`, `ios_on_linux` | Only when the host is macOS |
+| `Windows`, `UWP` | Only when the host is Windows |
+
+For each platform:
+
+1. Record the original `.env`, then edit its `# App config` block: comment out the old platform,
+   uncomment the target one.
+2. `make ai-run-tests key=<test_name> platform_to_run=<PLATFORM_TAG>`
+3. Validate only active, uncommented code.
+
+**Restore `.env` to its original content when validation finishes — including when you stop early
+or hit the run budget** — and say so in the final report. `.env` is never committed.
+
+**At most 5 automatic runs per platform** (the repo's `.cursor/rules/test.mdc` says 3; this limit
+wins). Before each rerun, diagnose: name the exact symptom and the failing step, list 1–3 likely
+causes, pick the most likely, and make the smallest change that addresses it. Never rerun
+unchanged. Commit each fix right after the run that justified it, one per cause, so the history
+shows the sequence of hypotheses; never leave several runs' worth of edits uncommitted.
+
+### Stop conditions
+
+Stop **before** the budget is spent when:
+
+- the same failure repeats and you have no new root-cause hypothesis;
+- the failure is infrastructure — relay server, BrowserStack, certificates, device allocation;
+- a required step or element does not exist and cannot be confirmed;
+- the case itself is contradictory, or contradicts observed product behaviour (a likely
+  **product defect**) and needs a decision;
+- the remaining change would stop being local and become a refactor.
+
+Then commit what is worth keeping and write the halt report below. Do not silently continue.
+
+### Forbidden fixes
+
+Never buy a green run with any of these; each makes the failure invisible instead of solved:
+
+| Anti-fix | Why it is wrong |
+|---|---|
+| Raising a timeout with no established cause | Converts a real failure into a slow one |
+| Adding `sleep` to "let it settle" | Hides a race; breaks again on a slower machine |
+| Adding retries or a `while` until it passes | Hides non-determinism |
+| Broadening an `except` | Swallows the actual signal |
+| Weakening or removing an assertion | Silently reduces what the test guarantees |
+| A fallback `if` for an unconfirmed UI state | Two code paths, neither verified |
+| A broad or fuzzy locator | Matches the wrong element eventually |
+| `skip` / `xfail` as the fix | Removes coverage without deciding anything |
+
+A `sleep` is acceptable only as an explicitly temporary stabiliser: short, commented with its
+reason, recorded as a residual risk, and only when no explicit wait exists.
+
+---
+
 ## Pull request
 
 ### Preconditions

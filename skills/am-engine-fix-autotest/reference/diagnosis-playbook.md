@@ -107,38 +107,10 @@ timing, locator, isolation or data is what is wrong.
 
 ---
 
-## Forbidden fixes
+## Forbidden fixes and stop conditions
 
-Each of these makes the failure invisible instead of solved:
-
-| Anti-fix | Why it is wrong |
-|---|---|
-| Raising a timeout with no established cause | Converts a real failure into a slow one |
-| Adding `sleep` to "let it settle" | Hides a race; breaks again on a slower machine |
-| Adding retries or a `while` until it passes | Hides non-determinism |
-| Broadening an `except` | Swallows the actual signal |
-| Weakening or removing an assertion | Silently reduces what the test guarantees |
-| A fallback `if` for an unconfirmed UI state | Two code paths, neither verified |
-| A broad or fuzzy locator | Matches the wrong element eventually |
-| `skip` / `xfail` as the fix | Removes coverage without deciding anything |
-
-A `sleep` is acceptable only as an explicitly temporary stabiliser: short, commented with its
-reason, recorded as a residual risk, and only when no explicit wait exists.
-
----
-
-## Stop conditions
-
-Stop before the run budget is spent when:
-
-- the same failure repeats and you have no new root-cause hypothesis;
-- the failure is infrastructure — relay server, BrowserStack, certificates, device allocation;
-- a required step or element does not exist and cannot be confirmed;
-- the case itself is contradictory and needs a requirements decision;
-- the remaining change would stop being local and become a refactor;
-- the evidence points at a product defect.
-
-Then produce the halt report from [delivery.md](../../am-engine-create-autotest/reference/delivery.md) and ask the user how to proceed.
+Both live in [delivery.md](../../am-engine-create-autotest/reference/delivery.md)
+§ Validation and run budget.
 
 ---
 
@@ -147,7 +119,7 @@ Then produce the halt report from [delivery.md](../../am-engine-create-autotest/
 - The root cause is stated in one sentence and is **VERIFIED**.
 - The change addresses that cause, not the symptom.
 - The test still verifies what the Qase case requires — compare against the case.
-- No forbidden fix from the table above is present.
+- No forbidden fix (see delivery.md) is present.
 - You can say what the green run does and does not prove.
 - Latent copies of the same bug elsewhere in the repo are searched for and reported:
 
