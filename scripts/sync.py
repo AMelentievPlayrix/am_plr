@@ -178,7 +178,7 @@ def preview_settings(label, src: Path, dst: Path, out_name: str):
         info(f"{label}: up to date ({dst})")
         return None
     GEN_DIR.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(current, indent=4, ensure_ascii=False) + "\n")
+    out.write_text(json.dumps(current, indent=2, ensure_ascii=False) + "\n")
     out.chmod(0o600)  # contains everything from the current file, incl. any tokens
     print(f"  {Y}~{N} {label}: {', '.join(changed)}")
     if comments:
