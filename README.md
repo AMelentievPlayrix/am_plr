@@ -53,6 +53,7 @@ Open Claude Code in any project. The plugin is enabled for all of them:
 /am-plr:prompt-writer           turn a rough idea into a good prompt
 /am-plr:plan                    write a plan for a change (plan mode, code/python rules)
 /am-plr:plan-review             review a plan: major issues only, as questions with proposed fixes
+/am-plr:code-review             review finished changes against the plan and rules: verdict + findings
 ```
 
 Claude also picks them up automatically from their descriptions. Team skills keep their own names
