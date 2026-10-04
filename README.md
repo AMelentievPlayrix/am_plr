@@ -76,7 +76,9 @@ workspaces/*.code-workspace     VS Code multi-folder workspaces
 
 ## How conflicts are avoided
 
-- **Team skills/agents/rules stay in their repos** and load from there. am_plr never copies them.
+- **Team skills/agents/rules stay in their repos** and load from there.
+- **am_plr is self-contained:** its skills rely only on rules inside am_plr. Rules they need from a team repo are
+  copied into `rules/` (e.g. `code.md`, `python.md` from vso-engine-autotests); refresh the copy when the original changes.
 - **Skills**: plugin skills are namespaced (`am-plr:commit`), so they can't hide a team skill.
 - **MCP**: one file, `am_plr/.mcp.json`. Team servers run from their repos' code and venvs and keep the names
   their skills call (`qase`, `cats-mcp-server`, …). It loads only when am_plr is the first workspace folder.

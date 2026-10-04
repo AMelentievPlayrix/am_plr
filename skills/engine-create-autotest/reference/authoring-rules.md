@@ -4,8 +4,8 @@ Originally ported from vso-engine-autotests `.cursor/rules/test.mdc` and since c
 repo; where they disagree, this file and the code win. Priority order when rules conflict:
 **Critical → Important → Best practice.**
 
-All generated Python must additionally satisfy `.cursor/rules/code.mdc` and
-`.cursor/rules/python.mdc`: Python 3.10+ type-hint syntax, 120-char lines, double
+All generated Python must additionally satisfy the am_plr rules
+[code.md](../../../rules/code.md) and [python.md](../../../rules/python.md): Python 3.10+ type-hint syntax, 120-char lines, double
 quotes, 4-space indent, import order, class member order, naming, docstring policy,
 error handling. `make code-style` applies ruff format + lint.
 

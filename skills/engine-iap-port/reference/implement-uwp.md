@@ -6,7 +6,7 @@ Your goal is to implement the UWP test plan from the previous chat, then run and
 
 Before writing any code, read:
 
-1. the authoring rules ([authoring-rules.md](../../engine-create-autotest/reference/authoring-rules.md)) and the repo's `.cursor/rules/python.mdc` / `code.mdc`.
+1. the authoring rules ([authoring-rules.md](../../engine-create-autotest/reference/authoring-rules.md)) and the am_plr rules [python.md](../../../rules/python.md) / [code.md](../../../rules/code.md).
 2. `tests/tests_in_app_purchase/test_{id}_*.py` — current state of the target test file (including existing `_ios` / `_mac` functions and shared `common_part*` helpers).
 3. `framework/test_management/test_steps/system_ui/uwp_system_ui_steps.py` — only if the plan calls for new UWP steps.
 4. `framework/services/ui_automation/platforms/uwp/ui_controller.py` and the relevant `framework/services/ui_automation/platforms/uwp/dialogs/*.py` — only if a new UWP step needs to drive a dialog.
