@@ -43,11 +43,8 @@ Read the code involved; don't plan from file names. Work through, in your reason
 
 ## 4. Standards every proposed solution must meet
 
-- [code.md](../../rules/code.md) — complete, production-ready solutions (no stubs or placeholder
-  architectures), secrets only via env/secret stores, SOLID/DRY/KISS/YAGNI, composition over inheritance,
-  constants/config instead of hardcoded values, error handling and logging on I/O, network and external calls.
-- [python.md](../../rules/python.md) — for Python code: 3.10+ type hints everywhere (`X | None`, built-in
-  generics, `Self`), class member order, `@staticmethod` when no state is used, Black/ruff formatting.
+- [code.md](../../rules/code.md) for all code, and [python.md](../../rules/python.md) for Python.
+  Read them before proposing solutions; the plan must not propose anything they forbid.
 - Match the conventions of the code around the change; the project's own rules win where they are stricter.
 
 ## 5. Write the plan

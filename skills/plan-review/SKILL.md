@@ -31,8 +31,8 @@ Read the code the plan touches; verify its claims rather than trusting them. Loo
   circular dependencies.
 - **Security** — secrets in code, injection, unsafe deserialisation, missing validation at a boundary.
 - **Rules** — serious violations of [code.md](../../rules/code.md) and, for Python,
-  [python.md](../../rules/python.md): stubs or placeholders, hardcoded values that belong in config,
-  missing error handling on I/O or external calls, duplicated logic, missing type hints on new APIs.
+  [python.md](../../rules/python.md) (read them first): only violations that would cause a bug, a security
+  problem or rework, not style.
 - **Design** — a much simpler or safer approach exists, or the plan over-builds what was asked.
 - **Verification** — no way to tell the change works (no test or check step) where one is needed.
 
