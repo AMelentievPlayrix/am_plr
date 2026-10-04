@@ -23,6 +23,8 @@ CLAUDE_DIR = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude"
 CLAUDE_JSON = CLAUDE_DIR / ".claude.json" if os.environ.get("CLAUDE_CONFIG_DIR") else Path.home() / ".claude.json"
 GEN_DIR = REPO / "artifacts" / "generated"
 MCP_JSON = GEN_DIR / "mcp.json"
+PROJECT_MCP = REPO / ".mcp.json"  # loaded by Claude Code when am_plr is the first workspace folder
+WORKSPACES = REPO / "workspaces"
 VSCODE_USER_DIR = next((d for d in (Path.home() / "Library/Application Support/Code/User",  # macOS
                                     Path.home() / ".config/Code/User") if d.is_dir()), None)  # Linux
 
@@ -280,47 +282,60 @@ def build_mcp(mcp_specs):
     return servers
 
 
-def check_skill_mcp_refs(servers, skill_dirs):
-    """Team MCP servers my skills call (qase, cats-mcp-server, ...) that aren't in user config yet."""
-    known = set(servers)
+def project_mcp():
     try:
-        known |= set(json.loads(CLAUDE_JSON.read_text()).get("mcpServers") or {})
+        return json.loads(PROJECT_MCP.read_text()).get("mcpServers") or {}
     except (OSError, json.JSONDecodeError):
-        pass
-    missing = set()
+        return {}
+
+
+def check_workspaces():
+    """am_plr must be the first folder: Claude Code starts there and loads am_plr/.mcp.json."""
+    files = sorted(WORKSPACES.glob("*.code-workspace")) if WORKSPACES.is_dir() else []
+    for ws in files:
+        try:
+            folders = read_jsonc(ws)[0].get("folders") or []
+        except (OSError, json.JSONDecodeError) as e:
+            warn(f"{ws.name}: unreadable ({e})")
+            continue
+        first = (ws.parent / folders[0]["path"]).resolve() if folders else None
+        if first == REPO:
+            info(f"{ws.name}: am_plr is the first folder")
+        else:
+            warn(f"{ws.name}: first folder is {first}, not am_plr - {PROJECT_MCP.name} won't load")
+            todo.append((f"Make am_plr the first folder in {ws.name}", [
+                f"Edit {ws}: move the {{\"path\": \"..\"}} entry to the top of \"folders\"."]))
+
+
+def check_skill_mcp_refs(skill_dirs):
+    """MCP servers my skills call (qase, cats-mcp-server, ...) that am_plr/.mcp.json doesn't define."""
+    used = set()
     for skill_dir in skill_dirs:
         for f in skill_dir.rglob("*.md"):
-            missing |= set(re.findall(r"mcp__([A-Za-z0-9_-]+?)__", f.read_text(encoding="utf-8", errors="ignore")))
-    return sorted(missing - known)
+            used |= set(re.findall(r"mcp__([A-Za-z0-9_-]+?)__", f.read_text(encoding="utf-8", errors="ignore")))
+    return sorted(used - set(project_mcp()))
 
 
-def team_mcp_todo(docs, missing):
-    """am_plr prepares only my own servers; say where team servers go if you want them too."""
-    lines = [f"Add them to the top-level \"mcpServers\" of {CLAUDE_JSON}, next to yours, as their docs describe:"]
-    lines += [f"  {str(d).replace(str(Path.home()), '~', 1)}" for d in docs if d.is_file()]
-    if missing:
-        lines.append(f"Your am-plr skills use: {', '.join(missing)} (not in your config yet)")
-    todo.append(("Optional: extend with team MCP servers (qase, cats-mcp-server, teamcity, ...)", lines))
-
-
-def mcp_todo(servers):
-    """Compare my servers with user-scope MCP config and queue what to copy. Nothing is written."""
-    try:
-        current = json.loads(CLAUDE_JSON.read_text()).get("mcpServers") or {}
-    except (OSError, json.JSONDecodeError):
-        current = {}
+def mcp_todo(servers, docs, missing):
+    """All MCP servers live in am_plr/.mcp.json. Setup only reports what to add there; nothing is written."""
+    current = project_mcp()
+    info(f"{PROJECT_MCP.name}: {', '.join(current) or 'no servers yet'}")
     strip = lambda s: {k: v for k, v in s.items() if k != "type"}
     todo_names = [n for n in servers if strip(current.get(n, {})) != strip(servers[n])]
-    if not servers:
-        info("no own MCP servers yet (add [mcp.<name>] blocks to upstreams.toml)")
     for n in servers:
-        print(f"    {n}: " + (f"{Y}to add / update{N}" if n in todo_names else f"{D}in sync{N}"))
+        print(f"    {n}: " + (f"{Y}to add / update{N}" if n in todo_names else f"{D}in {PROJECT_MCP.name}{N}"))
     if todo_names:
-        todo.append(("Add my MCP servers (all projects)", [
-            f"Copy {', '.join(todo_names)} from {MCP_JSON}",
-            f"into the top-level \"mcpServers\" of {CLAUDE_JSON} (keep your existing entries).",
-            "Close Claude Code first: it rewrites that file while running.",
+        todo.append((f"Add my MCP servers to {PROJECT_MCP}", [
+            f"Copy {', '.join(todo_names)} from {MCP_JSON} into its \"mcpServers\".",
         ]))
+    if missing:
+        info(f"skills use MCP servers not in {PROJECT_MCP.name}: {', '.join(missing)}")
+    lines = [f"Check {MCP_JSON} (my own servers) and add new servers to {PROJECT_MCP},",
+             "not to ~/.claude.json. Team servers (qase, cats-mcp-server, ...) are described in:"]
+    lines += [f"  {str(d).replace(str(Path.home()), '~', 1)}" for d in docs if d.is_file()]
+    if missing:
+        lines.append(f"Your am-plr skills still need: {', '.join(missing)}")
+    todo.append(("Optional: extend MCP servers", lines))
 
 
 # ----------------------------------------------------------------------------- main
@@ -344,13 +359,13 @@ def main():
     step(f"MCP -> {MCP_JSON}")
     servers = build_mcp(mcp_specs)
     check_secrets(servers)
-    mcp_todo(servers)
-    team_mcp_todo(mcp_docs, check_skill_mcp_refs(servers, skill_dirs))
+    check_workspaces()
+    mcp_todo(servers, mcp_docs, check_skill_mcp_refs(skill_dirs))
 
     step("Done" + (f" with {len(warnings)} warning(s)" if warnings else ""))
     for w in warnings:
         print(f"  {Y}!{N} {w}")
-    order = ("Create .env", "Fill in", "Load tokens", "Install the am-plr", "Add my MCP", "Review", "Optional")
+    order = ("Create .env", "Fill in", "Load tokens", "Install the am-plr", "Make am_plr", "Add my MCP", "Review", "Optional")
     todo.sort(key=lambda t: next((i for i, p in enumerate(order) if t[0].startswith(p)), len(order)))
     if todo:
         print(f"\n{B}Next steps{N} - setup changed nothing outside ~/.claude/rules; run these yourself:")

@@ -3,7 +3,7 @@
 #
 #   - checks the am-plr plugin (skills) is installed - installing it is your step
 #   - rules         -> ~/.claude/rules/am_plr (one symlink)
-#   - MCP config and settings previews -> artifacts/generated/ + copy-paste instructions
+#   - settings previews + my MCP config -> artifacts/generated/; checks am_plr/.mcp.json and workspaces
 #
 # Only the ~/.claude/rules/am_plr symlink is created (and old skill symlinks removed); nothing else is written
 # outside artifacts/. Honors CLAUDE_CONFIG_DIR (defaults to ~/.claude), same as Claude Code itself.
