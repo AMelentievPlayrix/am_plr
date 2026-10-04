@@ -230,10 +230,16 @@ def sync_settings():
     return [p for p in previews if p]
 
 
+def missing_before_env(names):
+    """Tokens that were not in the environment setup.sh itself was started with (before it sourced .env)."""
+    before = set(filter(None, os.environ.get("AM_PLR_ENV_BEFORE", "").split(":")))
+    return [n for n in names if n not in before]
+
+
 def check_secrets(servers):
-    """Every ${VAR} used by the MCP config must be set; setup.sh loads am_plr/.env into the env first."""
+    """Every ${VAR} in .mcp.json and my own servers must be set; setup.sh loads am_plr/.env into the env first."""
     env_file, example = REPO / ".env", REPO / ".env.example"
-    needed = {v: n for n, s in servers.items() for v in env_refs(s)}
+    needed = {v: n for n, s in {**project_mcp(), **servers}.items() for v in env_refs(s)}
     if not needed:
         return
     if not env_file.exists():
@@ -245,6 +251,13 @@ def check_secrets(servers):
         warn(f"{var} (mcp '{needed[var]}') is empty in {env_file}")
     if missing:
         todo.append(("Fill in empty tokens, then open a new terminal", [f"{env_file}: {', '.join(missing)}"]))
+    if needed and os.environ.get("TERM_PROGRAM") == "vscode" and missing_before_env(needed):
+        # Claude Code expands ${VAR} in .mcp.json from its own environment. VS Code started from the Dock never
+        # sourced shell/init.zsh, so its terminals (and Claude) lack the tokens until it's started from a shell.
+        todo.append(("Restart VS Code from a terminal so MCP servers get the tokens from .env", [
+            "Quit VS Code fully (Cmd+Q), then in Terminal.app:",
+            f"open -a 'Visual Studio Code' {shlex.quote(str(WORKSPACES / 'vso.code-workspace'))}",
+        ]))
     elif needed:
         info(f"all {len(needed)} MCP token(s) set in {env_file}")
 

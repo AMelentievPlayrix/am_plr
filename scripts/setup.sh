@@ -14,6 +14,11 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 mkdir -p "$REPO"/{skills,agents,rules,mcp} "$REPO/artifacts/generated"
 
 # Same loading as shell/init.zsh, so the token check sees exactly what terminals get.
+# Names of non-empty variables before .env is loaded, so sync.py can tell whether this shell (e.g. a
+# VS Code terminal) already had the tokens or only gets them from this script.
+AM_PLR_ENV_BEFORE="$(env | sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=..*/\1/p' | tr '\n' ':')"
+export AM_PLR_ENV_BEFORE
+
 if [ -f "$REPO/.env" ]; then
     set -a
     # shellcheck disable=SC1091
