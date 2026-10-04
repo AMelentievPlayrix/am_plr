@@ -53,8 +53,6 @@ screenshot or a linked bug, ask the user for the link instead of inventing conte
 Asana attachment. Ignore every other `mcp__cats__*` tool here: they drive the VSO
 Editor from `perfect-project`, not this project's test app.
 
-**GitHub** — no GitHub MCP is configured in this workspace. Use the `gh` CLI
-(installed, v2.95.0). If a GitHub MCP is added later, prefer it.
 
 ## Workflow
 
@@ -86,8 +84,8 @@ git log --oneline origin/master..HEAD        # what the current branch already c
   belongs to this task.
 
 Read [reference/delivery.md](reference/delivery.md) § Branch and § Commits before the first
-edit. Short version: one commit per finished logical piece, short plain-language subject,
-explicit paths only, never `git add -A`.
+edit, and the rule [writing-git-github-asana.md](../../rules/writing-git-github-asana.md) for
+PR and Asana conventions. Every commit goes through the `am-commit` skill.
 
 ### 3. Implement
 
@@ -103,16 +101,9 @@ Non-negotiables, repeated here because they are violated most often:
 - Only tags that exist in `framework/test_management/enums/common/tags.py`.
 - Unimplementable case steps become commented code with the step number and a reason.
 
-**Commit as each piece lands**, in this order — skip what does not apply:
-
-| Order | Commit | Example subject |
-|---|---|---|
-| 1 | each new or changed framework step | `Add step that waits for the store to load` |
-| 2 | each other framework change (enum, util, fixture) | `Add purchase tag to the tags enum` |
-| 3 | the test file itself | `Add test VSO-17595 for in-store purchase` |
-
-Never put a framework change and the test in the same commit. Run `make code-style-check`
-before each commit so every commit stands on its own.
+**Commit as each piece lands**: call the `am-commit` skill (Skill tool, `skill: "am-commit"`) with the paths of that piece,
+the split order from [delivery.md](reference/delivery.md) § Commits, and `make code-style-check`
+as the pre-commit check.
 
 ### 4. Validate per platform
 
@@ -132,10 +123,8 @@ For each platform:
 3. On failure, diagnose before editing (see step 5).
 4. Validate only active, uncommented code.
 
-**Commit each fix separately, right after the run that justified it** — one commit per
-cause, while the reason is still fresh. `Fix purchase button locator on iOS` tells a
-reviewer more than the same change buried in a squashed diff. Never leave several runs'
-worth of edits uncommitted.
+**Commit each fix right after the run that justified it** (via `am-commit`), one per cause,
+while the reason is still fresh. Never leave several runs' worth of edits uncommitted.
 
 **Restore `.env` to its original content when validation finishes — including when
 you stop early or hit the run budget.** State in the final report that you did.
@@ -170,7 +159,7 @@ retry loop, or a weakened assertion.
 
 Add the validation results to the test file as the project's other tests do
 (platform, date, outcome). Run `make code-style-check` and fix what it reports.
-Commit this on its own: `Add test run results`.
+Commit this on its own via `am-commit`.
 
 ### 7. Open the pull request
 
@@ -178,22 +167,13 @@ Everything is already committed by now, so this step only pushes and opens.
 Follow [reference/delivery.md](reference/delivery.md) § Pull request — including the
 "already fixed upstream" check before pushing.
 
-Read your own history first, as a reviewer would:
-
-```bash
-git log --oneline origin/master..HEAD
-```
-
-If it does not read as clear steps, say so to the user instead of hiding it behind a
-summary. Never force-push, never `git reset --hard`, never squash or rebase what you
-already pushed.
 
 ### 8. Comment on Asana
 
 Follow [reference/delivery.md](reference/delivery.md) § Asana comment.
 For a new test the comment covers: what was automated, how it was validated, what was
 discovered along the way (product defects, gaps, deviations from the case), and the PR
-link. Post the comment — do not change the task status unless the user asks.
+link.
 
 ## Final report to the user
 
@@ -212,6 +192,4 @@ State plainly whether `.env` was restored and whether the case is fully covered.
 - Do not invent a step, locator, tag or UI flow that you have not confirmed in code.
 - Do not skip validation on an applicable platform without the user's explicit say-so.
 - Do not report a test as done before a green run with the platform's own marker.
-- Do not commit `.env`, secrets, or unrelated working-tree changes.
-- Do not pile the whole task into one commit, and do not rewrite pushed history.
-- Do not close or reassign the Asana task; comment only.
+- Everything in the writing rule's git safety section (no `.env`, no rewriting history, comment-only on Asana).

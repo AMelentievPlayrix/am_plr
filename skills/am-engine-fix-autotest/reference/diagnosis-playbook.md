@@ -138,7 +138,7 @@ Stop before the run budget is spent when:
 - the remaining change would stop being local and become a refactor;
 - the evidence points at a product defect.
 
-Then produce the halt report from `reference/delivery.md` and ask the user how to proceed.
+Then produce the halt report from [delivery.md](../../am-engine-create-autotest/reference/delivery.md) and ask the user how to proceed.
 
 ---
 

@@ -2,20 +2,9 @@
 
 Applies to both `/am-engine-create-autotest` and `/am-engine-fix-autotest`.
 
-## Output language
-
-Different outputs go to different audiences, so they use different languages:
-
-| Output | Language |
-|---|---|
-| Talking to the user in chat — progress, reports, questions, halt report | English |
-| Commit messages | English |
-| Pull request title and description | Russian |
-| Asana comment | Russian |
-
-Keep each one consistent throughout a task. An explicit instruction from the user overrides
-this table; nothing else does. This is the only place the choice is stated — the workflow
-steps do not repeat it.
+Language, the generic PR body and Asana formatting come from the rule
+[writing-git-github-asana.md](../../../rules/writing-git-github-asana.md). Every commit goes through
+the `am-commit` skill. This file adds only what is specific to vso-engine-autotests.
 
 ---
 
@@ -62,25 +51,13 @@ whether the branch looks related to this task. Do not guess from the branch name
 when it matches the expected pattern — a name that looks right can still be someone else's
 in-flight work.
 
-Reusing the current branch is fine; that is what the user may want. What is not fine is
-choosing for them.
-
-### Either way
-
-Record the pre-existing dirty files. Uncommitted work you did not make is the user's —
-never stage, commit, revert or stash it. If it overlaps files you must change, ask first.
-
 ---
 
-## Commits — small, logical, as you go
+## Commits — as you go, split like this
 
-**Commit each finished piece of work when it is finished.** Do not accumulate everything
-into one commit at the end. The goal is a history a reviewer can read commit by commit and
-understand what happened, in order, without opening the whole diff.
-
-### One commit = one logical change
-
-Split along these boundaries. Skip the ones that do not apply.
+**Commit each finished piece of work when it is finished** by calling the `am-commit` skill
+with that piece's paths, this split order and `make code-style-check` as the pre-commit check.
+Do not accumulate everything into one commit at the end.
 
 **Creating a test:**
 
@@ -98,59 +75,7 @@ Split along these boundaries. Skip the ones that do not apply.
 3. a latent copy of the same bug found elsewhere — its own commit
 4. the recorded validation results
 
-Never mix a framework change and a test change in one commit. Never mix two unrelated
-fixes. When you catch yourself writing "and" in a subject line, it is two commits.
-
-### Staging discipline
-
-Stage explicit paths only:
-
-```bash
-git add path/to/file.py path/to/other.py
-git status --porcelain          # confirm nothing else got picked up
-git diff --cached --stat        # confirm the commit is what you think it is
-git commit -m "<subject>"
-```
-
-Never `git add -A`, `git add .`, or `git commit -a` — they sweep up the user's work,
-`.env`, and `artifacts/`.
-
-### Commit messages
-
-Short, plain, in simple words. Say **what changed**, so someone scanning `git log --oneline`
-understands the step without opening the diff.
-
-- One line. Aim for 50 characters, hard limit 72. No trailing period.
-- Plain words over jargon. No ticket-speak, no internal shorthand.
-- English, per § Output language — the PR and the Asana comment are Russian, commits are not.
-- Add a body only when the *why* is not obvious from the subject. Two or three lines, blank
-  line after the subject.
-
-| Bad | Why | Better |
-|---|---|---|
-| `fix` | Says nothing | `Fix purchase button locator on iOS` |
-| `wip` | Not a change | — commit when the piece is done |
-| `Updates` | Which ones? | `Add step that waits for the scene to load` |
-| `Add test and new step and fix tag` | Three changes | Three commits |
-| `Refactor` | Hides the scope | `Move shared purchase code to common_part` |
-| `Review fixes` | Reviewer-only context | `Remove extra sleep from event check` |
-
-### Each commit should stand on its own
-
-Before committing, the tree should be importable and style-clean:
-
-```bash
-make code-style-check
-```
-
-A reviewer should be able to check out any single commit and find the repo in a sane state.
-Do not commit a half-written step that the next commit repairs.
-
-### Do not rewrite history
-
-No `--amend` on a pushed commit, no interactive rebase, no squashing your own history to
-"tidy it up" — the step-by-step trail is the point. No `--force` push, no `git reset --hard`.
-Fix a mistake with a new commit that says what it fixes.
+Never mix a framework change and a test change in one commit.
 
 ---
 
@@ -165,89 +90,25 @@ Open the PR only after:
 - `.env` restored to its original content;
 - every change committed, and nothing of the user's staged.
 
-### Check whether the change is still needed
+Then run the rule's "still needed" and own-history checks, and push. This repository has no
+`.github/pull_request_template.md`, so use the rule's body template with these sections filled in:
 
-Before pushing, compare against the default branch:
+- **Причина** — for a fix: the root cause with evidence; for a new test: the Qase case and why now.
+- **Проверка** — a table per platform:
 
-```bash
-git fetch origin master
-git log --oneline origin/master -20
-git log origin/master -S'<distinctive_token_from_your_change>' --oneline
-```
+  | Платформа | Команда | Результат |
+  |---|---|---|
+  | macOS | `make ai-run-tests key=<test> platform_to_run=macOS` | PASSED |
 
-If someone has already landed the same fix, **do not open the PR.** Report the commit, its
-author and date, and ask the user how to proceed. This check has caught duplicate work
-before; run it every time.
-
-### Push and open
-
-```bash
-git log --oneline origin/master..HEAD    # read your own history as a reviewer would
-git push -u origin <branch>
-gh pr create --base master --title "<title>" --body-file <file>
-```
-
-No GitHub MCP is configured in this workspace, so use `gh`; prefer a GitHub MCP if one is
-added later. This repository has no `.github/pull_request_template.md` — use the body
-template below, but check for a template on every run in case one is added.
-
-### PR body template
-
-Title and body in Russian, matching the repository's history.
-
-```markdown
-## Что сделано
-<1–3 sentences: what the PR adds or repairs.>
-
-## Причина
-<For a fix: the root cause, with evidence. For a new test: the Qase case and why now.>
-
-## Изменения
-<A top-level summary of what changed — a few bullets at the level a reviewer thinks in:
-which step was added, which locator was corrected, which framework file was touched.
-Not a commit list; the commits are in the branch and speak for themselves.>
-
-## Проверка
-| Платформа | Команда | Результат |
-|---|---|---|
-| macOS | `make ai-run-tests key=<test> platform_to_run=macOS` | PASSED |
-
-## Ссылки
-- Qase: VSO-<case_id>
-- Asana: <task url>
-
-## Риски и ограничения
-<Commented-out steps, unverified expectations, known flakiness — or "нет".>
-```
-
-Summarise at the level of the work, not the log. The PR description says *what was done*;
-the commit history shows *how it got there*. Do not paste `git log` into the body.
-
-Still read `git log --oneline origin/master..HEAD` yourself before pushing. If it does not
-read as a clear sequence of steps, say so to the user — do not let a tidy summary cover for
-commits that were split badly.
-
-### Prohibitions
-
-- Never commit `.env`, tokens, or `artifacts/`.
-- Do not merge the PR.
+- **Ссылки** — `Qase: VSO-<case_id>` and the Asana task.
+- **Риски и ограничения** — commented-out steps, unverified expectations, known flakiness.
 
 ---
 
 ## Asana comment
 
-Post with `mcp__asana__asana_create_task_story(task_id=<gid>, html_text=...)`.
-The task gid is the last numeric segment of the Asana URL.
-
-Allowed HTML: `<body>`, `<strong>`, `<em>`, `<u>`, `<s>`, `<code>`, `<ol>`, `<ul>`,
-`<li>`, `<a>`, `<blockquote>`, `<pre>`. A single root `<body>` element, well-formed XML.
-No other elements, no attributes except on `<a>`.
-
-**Comment only. Do not close, reassign or re-status the task unless the user asks.**
-
-### What the comment must contain
-
-Write it so a teammate who never saw the session can follow it:
+Post it as `html_text` (formatting rules are in the rule). Write it so a teammate who never saw
+the session can follow it:
 
 1. **Что было** — the symptom for a fix, or the case being automated for a new test.
 2. **Как нашли причину** — the actual investigation path: which artifact, log line, build
@@ -260,9 +121,6 @@ Write it so a teammate who never saw the session can follow it:
 6. **Ссылки** — PR, Qase case, related commits.
 7. **Замечено попутно** — anything worth a separate task: latent copies of the same bug,
    flaky neighbours, stale rules. Optional but valuable.
-
-Report honestly. If something is unverified, say so in the comment rather than implying
-a stronger result than you have.
 
 ### Skeleton
 
