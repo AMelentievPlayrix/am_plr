@@ -1,47 +1,50 @@
----
-paths:
-  - "**/*.py"
----
+# Code rules
 
-# Code rules (Python)
+General rules for any code you write or change, in any language. Python specifics are in `python.md`.
+Based on vso-engine-autotests `.cursor/rules/code.mdc`, updated. Priority when rules conflict:
+critical → important → best practice. The project's own rules win where they are stricter.
 
-Copied from vso-engine-autotests `.cursor/rules/code.mdc`. Loaded when working on Python files.
-Priority when rules conflict: critical → important → best practice.
+## Critical
 
-## Code — critical
+- Production code is complete and working: no stubs, placeholders or dummy methods. (Test code may keep an
+  unimplementable step as commented code with a reason, where the test rules allow it.)
+- Consider the security impact of every change. Secrets only from environment variables or a secret store;
+  never hardcoded, never logged, never committed.
+- Validate input at boundaries: user input, files, network and external APIs.
 
-- Provide complete, working, production-ready implementations
-- Consider security implications in all code changes
-- Implement full functionality without stubs or placeholders
-- Store secrets and passwords in environment variables or secure configuration
+## Important
 
-## Code — important
+- Prefer the simplest design that works (KISS, YAGNI). Add an abstraction or design pattern only when it
+  removes real duplication or a real coupling problem, not in anticipation.
+- Single-purpose functions and classes; no duplicated logic (DRY); composition over inheritance.
+- Put values that may change in constants or configuration, not inline.
+- Match the style and structure of the surrounding code.
 
-- Design modular code for maintainability and reuse
-- Follow SOLID, DRY, KISS, YAGNI principles
-- Extract common logic into reusable functions, classes, or modules
-- Prefer composition over inheritance
-- Use configuration or constants for values that may change
+## Documentation
 
-## Code — best practice
+- Self-documenting code: descriptive names for variables, functions, classes and modules.
+- Comments only for corner cases, non-obvious behaviour, complex algorithms or business rationale.
+  Explain *why*, not *what*.
+- Docstrings only for public APIs, complex interfaces, and functions with non-trivial contracts or
+  counter-intuitive behaviour. Don't restate types or the obvious in docstrings.
 
-- Apply GoF and GRASP design patterns where appropriate
+## Errors
 
-## Documentation — critical
+- Let exceptions propagate unless there is specific handling to do.
+- Catch only to recover from an expected error, to translate it, or to clean up. Catch specific exception
+  types; never a bare catch-all that hides the cause.
+- When translating an exception, keep the original cause attached.
+- Use dedicated error types for domain errors callers are expected to handle.
 
-- Write self-documenting code with descriptive names for variables, functions, classes, and modules
-- Add comments only for: corner cases, non-obvious behavior, complex algorithms, or business logic rationale
-- Add docstrings only for: public APIs, complex interfaces, or functions with non-trivial contracts
+## Logging
 
-## Errors — critical
+- Log errors, warnings, important state changes and calls to external services.
+- Levels: DEBUG for diagnostics, INFO for significant events, WARNING for recoverable problems, ERROR for failures.
+- Include context (IDs, parameters, state), but never secrets, tokens or personal data.
+- Log meaningful events, not every obvious step.
 
-- Let exceptions propagate naturally unless specific handling is required
-- Use try/except only when: recovering from expected errors, transforming exceptions, or cleaning up resources
-- Catch specific exception types with explicit recovery actions
+## Tests
 
-## Logging — critical
-
-- Add logging for: errors, warnings, important state changes, and external service interactions
-- Log at appropriate levels: DEBUG for diagnostics, INFO for significant events, WARNING for recoverable issues, ERROR for failures
-- Include relevant context in log messages (IDs, parameters, state)
-- Focus logs on meaningful events rather than obvious sequential operations
+- No fixed sleeps: wait on an observable condition.
+- Each test checks the expected behaviour directly; don't weaken an assertion to make a test pass.
+- Share setup through the framework's fixture mechanism; use parametrisation instead of copy-pasted tests.
