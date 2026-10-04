@@ -2,6 +2,7 @@
 name: code-review
 description: Review implemented code changes (uncommitted changes, a branch, or a commit range) against the approved plan and the am_plr code and Python rules, and produce a structured report with a verdict and findings by severity. Read-only. Use for "review my changes", "check the implementation against the plan", or /am-plr:code-review [range or plan path].
 argument-hint: "[optional: commit range like origin/master..HEAD, and/or path to the plan file]"
+allowed-tools: Read Grep Glob Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git show *) Bash(make code-style-check *)
 ---
 
 # Code review: implementation against plan and rules

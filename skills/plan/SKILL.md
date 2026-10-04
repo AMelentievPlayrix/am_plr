@@ -2,6 +2,7 @@
 name: plan
 description: Write a reviewable implementation plan for requested code changes, in plan mode only, following the am_plr code and Python rules. Use when asked to "plan this", "make a plan for …", or /am-plr:plan <what to change>.
 argument-hint: "<what should be built or changed>"
+allowed-tools: Read Grep Glob Bash(git status *) Bash(git diff *) Bash(git log *)
 ---
 
 # Plan: conceptual plan for review and approval

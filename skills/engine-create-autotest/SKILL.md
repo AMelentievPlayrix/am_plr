@@ -1,7 +1,9 @@
 ---
 name: engine-create-autotest
 description: Create a new VSO engine autotest from a Qase test case — read the case over Qase MCP, implement it against existing steps, validate it on every applicable platform, open a pull request, and post a summary comment to Asana. Use for "automate VSO-12345", "write an autotest for Qase case 12345".
+argument-hint: "<Qase case id> <Asana task link>"
 disable-model-invocation: true
+allowed-tools: Read Edit Write Bash(git *) Bash(gh pr *) Bash(make *) Bash(grep *) mcp__qase mcp__asana mcp__cats-mcp-server__read_image
 ---
 
 # Create a VSO Engine Autotest

@@ -1,7 +1,9 @@
 ---
 name: engine-fix-autotest
 description: Repair a broken VSO engine autotest starting from an Asana task link — pull the task and failure evidence over Asana MCP, check whether it is already fixed upstream, find the root cause, fix it, validate, open a pull request, and post a summary comment to Asana. Use for "test X is broken", "fix this failing autotest", or a bare Asana link to a test-failure task.
+argument-hint: "<Asana task link>"
 disable-model-invocation: true
+allowed-tools: Read Edit Write Bash(git *) Bash(gh pr *) Bash(make *) Bash(grep *) mcp__qase mcp__asana mcp__cats-mcp-server__read_image mcp__teamcity
 ---
 
 # Fix a Broken VSO Engine Autotest

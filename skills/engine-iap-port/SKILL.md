@@ -1,8 +1,9 @@
 ---
 name: engine-iap-port
 description: Port an existing iOS in-app purchase autotest in vso-engine-autotests to macOS or UWP — first plan (read-only), then implement and validate the planned variant. Use for "add a macOS/UWP variant of IAP test 10559", "port purchase test to UWP".
-disable-model-invocation: true
 argument-hint: "<plan|implement> <macos|uwp> <test id>"
+disable-model-invocation: true
+allowed-tools: Read Edit Write Bash(git *) Bash(make *) Bash(grep *) mcp__qase
 ---
 
 # Port an in-app purchase test to macOS or UWP

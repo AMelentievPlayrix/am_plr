@@ -1,8 +1,9 @@
 ---
 name: describe-work
 description: File an Asana task for a set of code changes, open a matching GitHub PR, and cross-link both. Use when asked to "describe the work", "write up these changes", or close out a change with a task+PR pair.
-disable-model-invocation: true
 argument-hint: "[optional: which changes/diff to describe]"
+disable-model-invocation: true
+allowed-tools: Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git branch *) Bash(git switch *) Bash(git push *) Bash(gh pr *) Bash(gh api *) mcp__asana
 ---
 
 # Describe Work: Asana task + GitHub PR

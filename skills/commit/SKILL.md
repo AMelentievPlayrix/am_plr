@@ -2,6 +2,7 @@
 name: commit
 description: The single place for commit policy. Split the current uncommitted changes into several independent, logically-scoped commits instead of one big commit. Use when asked to "commit this", "commit in logical parts", or before opening a PR. Every other skill that needs to commit invokes this skill instead of committing itself.
 argument-hint: "[optional: paths/scope to commit, plus any project-specific split order]"
+allowed-tools: Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git add *) Bash(git restore --staged *) Bash(git commit *) Bash(make code-style-check *)
 ---
 
 # Commit: split changes into logical commits
