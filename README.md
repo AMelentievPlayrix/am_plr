@@ -17,8 +17,9 @@ Needs [uv](https://docs.astral.sh/uv/) and `jq`.
 2. **Do the "Next steps" it prints at the end.** Only what's still missing is listed, in order:
    - create `.env` from `.env.example` and fill in the tokens (git-ignored);
    - add `source ~/projects/am_plr/shell/init.zsh` to `~/.zshrc` (loads tokens, aliases, prompt);
-   - install the plugin: `claude plugin marketplace add ~/projects/am_plr` and `claude plugin install am-plr@am-plr`;
-   - paste the `claude mcp add-json ...` commands (Asana needs a one-time manual OAuth step, also printed);
+   - install the plugin: in Claude Code run `/plugin marketplace add ~/projects/am_plr`, then `/plugin install am-plr@am-plr`;
+   - copy the MCP servers you want from `artifacts/generated/mcp.json` into `"mcpServers"` of `~/.claude.json`
+     (keep your existing entries; close Claude Code first). Asana needs a one-time manual OAuth step, also printed;
    - review the Claude Code / VS Code settings with the printed `diff`, then run the printed `cp`.
 3. **Restart** the terminal, VS Code and Claude Code. Check with `/plugin`, `/mcp` and `/skills`.
 4. Run setup again: when everything is in place it prints **All set**.
@@ -85,8 +86,8 @@ workspaces/*.code-workspace     VS Code multi-folder workspaces
 | edit a skill or rule | just edit it | `/reload-plugins` or new session |
 | add / rename / delete a skill | change `skills/<name>/` | `/reload-plugins` |
 | change editor / Claude settings | edit `config/` | re-run setup, copy the printed command |
-| add my own MCP server | code in `mcp/<name>/` (deps inline, `uv run --script`) + `[mcp.<name>]` in `upstreams.toml` | re-run setup, paste the printed command |
-| use a team repo's MCP server | add `[mcp.<name>]` to `upstreams.toml` | re-run setup, paste the printed command |
+| add my own MCP server | code in `mcp/<name>/` (deps inline, `uv run --script`) + `[mcp.<name>]` in `upstreams.toml` | re-run setup, copy it from `mcp.json` |
+| use a team repo's MCP server | add `[mcp.<name>]` to `upstreams.toml` | re-run setup, copy it from `mcp.json` |
 | follow another team repo | add `[upstream.<name>]` to `upstreams.toml` | re-run setup |
 | add an alias / shell function | new or existing `shell/<NN>-name.zsh` (loaded in name order) | new terminal |
 | add a token | `.env` (+ the name in `.env.example`), use as `${VAR}` in MCP config | new terminal, re-run setup |

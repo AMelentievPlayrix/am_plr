@@ -14,9 +14,7 @@ Layering:
 import json
 import os
 import re
-import glob
 import shlex
-import shutil
 import sys
 import tomllib
 from pathlib import Path
@@ -87,17 +85,7 @@ def load_config():
     return upstreams, cfg.get("mcp", {})
 
 
-def claude_cli():
-    """`claude` on PATH, else the newest binary bundled with the VS Code extension."""
-    found = shutil.which("claude")
-    if found:
-        return "claude"
-    bundled = sorted(glob.glob(str(Path.home() / ".vscode/extensions/anthropic.claude-code-*"
-                                                 "/resources/native-binary/claude")))
-    return shlex.quote(bundled[-1]) if bundled else "claude"
-
-
-def check_plugin(cli):
+def check_plugin():
     """Skills/agents come from the am-plr plugin; setup only checks it is installed and enabled."""
     try:
         settings = json.loads((CLAUDE_DIR / "settings.json").read_text())
@@ -107,10 +95,9 @@ def check_plugin(cli):
         info(f"plugin {PLUGIN_ID} enabled - skills load from {REPO}/skills")
         return
     print(f"  {Y}~{N} plugin {PLUGIN_ID} not installed yet")
-    todo.append(("Install the am-plr plugin (once per machine)", [
-        f"{cli} plugin marketplace add {shlex.quote(str(REPO))}",
-        f"{cli} plugin install {PLUGIN_ID}",
-        "# or inside Claude Code: /plugin marketplace add <path>  then  /plugin install am-plr@am-plr",
+    todo.append(("Install the am-plr plugin (once per machine) - in Claude Code, run:", [
+        f"/plugin marketplace add {REPO}",
+        f"/plugin install {PLUGIN_ID}",
     ]))
 
 
@@ -321,8 +308,8 @@ def check_skill_mcp_refs(servers, manual, skill_dirs):
             warn(f"skill '{skill_dir.name}' calls mcp__{r}__* but no MCP server '{r}' is configured")
 
 
-def mcp_todo(servers, manual, cli):
-    """Compare with user-scope MCP config and queue the commands to run. Nothing is written."""
+def mcp_todo(servers, manual):
+    """Compare with user-scope MCP config and queue what to copy. Nothing is written."""
     try:
         current = json.loads(CLAUDE_JSON.read_text()).get("mcpServers") or {}
     except (OSError, json.JSONDecodeError):
@@ -338,11 +325,13 @@ def mcp_todo(servers, manual, cli):
         print(f"    {n}: {R}- no longer in am_plr{N}")
 
     if new or changed or stale:
-        # values are read from the generated file, so tokens never land in chat/terminal history
-        lines = [f"{cli} mcp remove --scope user {shlex.quote(n)}" for n in changed + stale]
-        lines += [f"{cli} mcp add-json --scope user {shlex.quote(n)} "
-                  f"\"$(jq -c '.mcpServers[\"{n}\"]' {shlex.quote(str(MCP_JSON))})\"" for n in new + changed]
-        todo.append(("Add MCP servers for all projects (user scope)", lines))
+        names = ", ".join(new + changed)
+        lines = [f"Copy the servers you want ({names}) from {MCP_JSON}",
+                 f"into the top-level \"mcpServers\" of {CLAUDE_JSON} (keep your existing entries).",
+                 "Close Claude Code first: it rewrites that file while running."]
+        if stale:
+            lines.append(f"Remove from there (no longer in am_plr): {', '.join(stale)}")
+        todo.append(("Add MCP servers (all projects)", lines))
     for n, (src, text) in manual.items():
         if n not in current:
             todo.append((f"Set up MCP '{n}' by hand (from {src})", text.strip().splitlines()))
@@ -352,11 +341,10 @@ def mcp_todo(servers, manual, cli):
 
 def main():
     upstreams, mcp_specs = load_config()
-    cli = claude_cli()
 
     step("Plugin (skills, agents) -> Claude Code")
     remove_old_links()
-    check_plugin(cli)
+    check_plugin()
     skill_dirs = [d for d in sorted((REPO / "skills").glob("*")) if (d / "SKILL.md").is_file()]
     info(f"{len(skill_dirs)} skill(s): {', '.join('am-plr:' + d.name for d in skill_dirs)}")
 
@@ -371,7 +359,7 @@ def main():
     servers, manual = build_mcp(upstreams, mcp_specs)
     check_secrets(servers)
     check_skill_mcp_refs(servers, manual, skill_dirs)
-    mcp_todo(servers, manual, cli)
+    mcp_todo(servers, manual)
 
     step("Done" + (f" with {len(warnings)} warning(s)" if warnings else ""))
     for w in warnings:
