@@ -145,7 +145,9 @@ def read_jsonc(path: Path):
         comments = comments or tok.startswith("/")
         return ""
 
-    clean = re.sub(r'"(?:\\.|[^"\\])*"|//[^\n]*|/\*.*?\*/|,(?=\s*[}\]])', drop, text, flags=re.S)
+    # Two passes: comments first, so a trailing comma followed by a comment (`"x",  // note`) is seen as trailing.
+    clean = re.sub(r'"(?:\\.|[^"\\])*"|//[^\n]*|/\*.*?\*/', drop, text, flags=re.S)
+    clean = re.sub(r'"(?:\\.|[^"\\])*"|,(?=\s*[}\]])', drop, clean)
     return (json.loads(clean) if clean.strip() else {}), comments
 
 
