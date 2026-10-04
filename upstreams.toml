@@ -3,14 +3,6 @@
 # Upstream skills/agents/rules stay in their repos and load as project scope. Our skills come
 # from the am-plr plugin (namespaced am-plr:<skill>), so the two never collide.
 
-# Team MCP servers (qase, cats-mcp-server, teamcity, ...) are not prepared by am_plr. To use them,
-# add them to the top-level "mcpServers" of ~/.claude.json as these docs describe. setup.sh prints
-# this list. (Must stay above the first [table] so TOML keeps it top-level.)
-mcp_docs = [
-  "~/projects/perfect-project/cats2/docs/mcp-setup.md",
-  "~/projects/vso-engine-autotests/docs/README_MCP.md",
-]
-
 [upstream.perfect-project]
 path = "~/projects/perfect-project"
 

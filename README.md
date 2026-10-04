@@ -24,8 +24,7 @@ Needs [uv](https://docs.astral.sh/uv/) and `jq`.
    - review the Claude Code / VS Code settings with the printed `diff`, then run the printed `cp`. On a new machine
      (no `~/.claude/settings.json`) the blueprint is copied as is: put your token in place of
      `<YOUR_ANTHROPIC_AUTH_TOKEN>`;
-   - optional: add MCP servers to `am_plr/.mcp.json` (not `~/.claude.json`): my own from
-     `artifacts/generated/mcp.json`, team ones as their docs describe (`perfect-project/cats2/docs/mcp-setup.md`).
+   - optional: add new MCP servers to `am_plr/.mcp.json` (my own ones are generated in `artifacts/generated/mcp.json`).
 3. **Restart** the terminal, VS Code and Claude Code. Check with `/plugin`, `/mcp` and `/skills`.
 4. Run setup again: when everything is in place it prints **All set**.
 
@@ -67,7 +66,7 @@ skills/<name>/SKILL.md          my skills -> /am-plr:<name> in every project
 agents/<name>.md                my subagents -> am-plr:<name>
 rules/*.md                      my rules, loaded in every session (`paths:` frontmatter to scope)
 mcp/<name>/                     code of my own MCP servers (configured in upstreams.toml)
-upstreams.toml                  team repos I follow, my own MCP servers, links to team MCP docs
+upstreams.toml                  team repos I follow, my own MCP servers
 config/claude/settings.json     Claude Code blueprint: gateway env (token = placeholder), model, permissions, plugin
 config/vscode/settings.json     editor settings I want everywhere (autosave, 120 ruler, terminal, Python)
 shell/*.zsh                     aliases, functions, prompt; loaded by shell/init.zsh (sourced from ~/.zshrc)
@@ -92,7 +91,7 @@ workspaces/*.code-workspace     VS Code multi-folder workspaces
 | add / rename / delete a skill | change `skills/<name>/` | `/reload-plugins` |
 | change editor / Claude settings | edit `config/` | re-run setup, copy the printed command |
 | add my own MCP server | code in `mcp/<name>/` (deps inline, `uv run --script`) + `[mcp.<name>]` in `upstreams.toml` | re-run setup, copy it from `artifacts/generated/mcp.json` into `.mcp.json` |
-| use a team repo's MCP server | add it to `am_plr/.mcp.json` from that repo's docs | restart Claude Code |
+| use another project's MCP server | add it to `am_plr/.mcp.json` | restart Claude Code |
 | follow another team repo | add `[upstream.<name>]` to `upstreams.toml` | re-run setup |
 | add an alias / shell function | new or existing `shell/<NN>-name.zsh` (loaded in name order) | new terminal |
 | add a token for my MCP server | `.env` (+ the name in `.env.example`), use as `${VAR}` in `upstreams.toml` | new terminal, re-run setup |

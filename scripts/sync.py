@@ -7,7 +7,7 @@ Layering:
                  am-plr:<skill>, so they never collide with upstream project skills.
   rules          plugins can't ship rules -> linked as one dir ~/.claude/rules/am_plr.
   mcp            only MY OWN servers (upstreams.toml [mcp.*]) -> generated file to copy into user
-                 config. Team servers stay configured in their repos; setup points to their docs.
+                 config. All servers in use live in am_plr/.mcp.json.
 """
 
 import json
@@ -20,7 +20,6 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 CLAUDE_DIR = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
-CLAUDE_JSON = CLAUDE_DIR / ".claude.json" if os.environ.get("CLAUDE_CONFIG_DIR") else Path.home() / ".claude.json"
 GEN_DIR = REPO / "artifacts" / "generated"
 MCP_JSON = GEN_DIR / "mcp.json"
 PROJECT_MCP = REPO / ".mcp.json"  # loaded by Claude Code when am_plr is the first workspace folder
@@ -78,13 +77,12 @@ def visible(p: Path):
 def load_config():
     cfg_file = REPO / "upstreams.toml"
     if not cfg_file.is_file():
-        return {}, {}, []
+        return {}, {}
     cfg = tomllib.loads(cfg_file.read_text())
     upstreams = {}
     for name, u in cfg.get("upstream", {}).items():
         upstreams[name] = Path(os.path.expanduser(u["path"])).resolve()
-    docs = [Path(os.path.expanduser(d)) for d in cfg.get("mcp_docs", [])]
-    return upstreams, cfg.get("mcp", {}), docs
+    return upstreams, cfg.get("mcp", {})
 
 
 def check_plugin():
@@ -295,7 +293,7 @@ def env_refs(server):
 
 
 def build_mcp(mcp_specs):
-    """My own [mcp.<name>] blocks in upstreams.toml -> artifacts/generated/mcp.json. Team servers stay upstream."""
+    """My own [mcp.<name>] blocks in upstreams.toml -> artifacts/generated/mcp.json."""
     servers = {}
     for name, spec in mcp_specs.items():
         spec = dict(spec)
@@ -347,7 +345,7 @@ def check_skill_mcp_refs(skill_dirs):
     return sorted(used - set(project_mcp()))
 
 
-def mcp_todo(servers, docs, missing):
+def mcp_todo(servers, missing):
     """All MCP servers live in am_plr/.mcp.json. Setup only reports what to add there; nothing is written."""
     current = project_mcp()
     info(f"{PROJECT_MCP.name}: {', '.join(current) or 'no servers yet'}")
@@ -361,9 +359,7 @@ def mcp_todo(servers, docs, missing):
         ]))
     if missing:
         info(f"skills use MCP servers not in {PROJECT_MCP.name}: {', '.join(missing)}")
-    lines = [f"Check {MCP_JSON} (my own servers) and add new servers to {PROJECT_MCP},",
-             "not to ~/.claude.json. Team servers (qase, cats-mcp-server, ...) are described in:"]
-    lines += [f"  {str(d).replace(str(Path.home()), '~', 1)}" for d in docs if d.is_file()]
+    lines = [f"Add new servers to {PROJECT_MCP}; my own ones are generated in {MCP_JSON}."]
     if missing:
         lines.append(f"Your am-plr skills still need: {', '.join(missing)}")
     todo.append(("Optional: extend MCP servers", lines))
@@ -372,7 +368,7 @@ def mcp_todo(servers, docs, missing):
 # ----------------------------------------------------------------------------- main
 
 def main():
-    upstreams, mcp_specs, mcp_docs = load_config()
+    upstreams, mcp_specs = load_config()
 
     step("Plugin (skills, agents) -> Claude Code")
     remove_old_links()
@@ -391,7 +387,7 @@ def main():
     servers = build_mcp(mcp_specs)
     check_secrets(servers)
     check_workspaces()
-    mcp_todo(servers, mcp_docs, check_skill_mcp_refs(skill_dirs))
+    mcp_todo(servers, check_skill_mcp_refs(skill_dirs))
 
     step("Done" + (f" with {len(warnings)} warning(s)" if warnings else ""))
     for w in warnings:
