@@ -151,8 +151,14 @@ def read_jsonc(path: Path):
     return (json.loads(clean) if clean.strip() else {}), comments
 
 
+PLACEHOLDER = re.compile(r"^<YOUR_[A-Z0-9_]+>$")  # e.g. "<YOUR_ANTHROPIC_AUTH_TOKEN>" in config/
+
+
 def merge(base, ours, path=""):
-    """am_plr wins for scalars, dicts merge recursively, lists are unioned. Returns changed keys."""
+    """am_plr wins for scalars, dicts merge recursively, lists are unioned. Returns changed keys.
+
+    A placeholder value never replaces an existing one (your real token stays) and never counts as a change.
+    """
     changed = []
     for k, v in ours.items():
         key = f"{path}.{k}" if path else k
@@ -163,18 +169,37 @@ def merge(base, ours, path=""):
             if extra:
                 base[k] += extra
                 changed.append(f"{key} (+{len(extra)})")
+        elif isinstance(v, str) and PLACEHOLDER.match(v):
+            base.setdefault(k, v)
         elif base.get(k) != v:
             base[k] = v
             changed.append(key)
     return changed
 
 
+def placeholders(d, path=""):
+    """Keys still holding a <YOUR_...> placeholder."""
+    out = []
+    for k, v in d.items():
+        key = f"{path}.{k}" if path else k
+        if isinstance(v, dict):
+            out += placeholders(v, key)
+        elif isinstance(v, str) and PLACEHOLDER.match(v):
+            out.append(key)
+    return out
+
+
 def preview_settings(label, src: Path, dst: Path, out_name: str):
-    """Merge am_plr keys over the current settings into artifacts/generated/<out_name>. Never writes dst."""
-    ours, _ = read_jsonc(src)
+    """config/ blueprint merged over your current settings -> artifacts/generated/<out_name>. Never writes dst.
+
+    Without a current file the blueprint alone is the result. Placeholders (tokens) are left for you to fill in.
+    """
+    ours = subst(read_jsonc(src)[0])
     current, comments = read_jsonc(dst) if dst.is_file() else ({}, False)
     changed = merge(current, ours)
     out = GEN_DIR / out_name
+    if not dst.is_file():
+        changed = changed or ["new file"]
     if not changed:
         out.unlink(missing_ok=True)
         info(f"{label}: up to date ({dst})")
@@ -185,7 +210,7 @@ def preview_settings(label, src: Path, dst: Path, out_name: str):
     print(f"  {Y}~{N} {label}: {', '.join(changed)}")
     if comments:
         warn(f"{label}: {dst} has comments - the generated file drops them, merge by hand to keep them")
-    return label, dst, out
+    return label, dst, out, placeholders(current)
 
 
 def sync_settings():
@@ -239,11 +264,17 @@ def check_shell():
 
 def settings_todo(previews):
     q = shlex.quote
-    for label, dst, out in previews:
-        todo.append((f"Review and apply {label} settings (your keys + am_plr keys, nothing removed)", [
-            f"diff {q(str(dst))} {q(str(out))}",
-            f"cp {q(str(dst))} {q(str(dst) + '.bak')} && cp {q(str(out))} {q(str(dst))}",
-        ]))
+    for label, dst, out, holes in previews:
+        if dst.is_file():
+            lines = [f"diff {q(str(dst))} {q(str(out))}",
+                     f"cp {q(str(dst))} {q(str(dst) + '.bak')} && cp {q(str(out))} {q(str(dst))}"]
+        else:
+            lines = [f"mkdir -p {q(str(dst.parent))} && cp {q(str(out))} {q(str(dst))}"]
+        if holes:
+            lines.append(f"then replace the placeholder(s) in {dst}: {', '.join(holes)}")
+        title = ("Review and apply {} settings (your keys + am_plr keys, nothing removed)" if dst.is_file()
+                 else "Create {} settings from the am_plr blueprint").format(label)
+        todo.append((title, lines))
 
 
 # ----------------------------------------------------------------------------- mcp

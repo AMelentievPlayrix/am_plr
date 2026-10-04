@@ -21,7 +21,9 @@ Needs [uv](https://docs.astral.sh/uv/) and `jq`.
    - add `source ~/projects/am_plr/shell/init.zsh` to `~/.zshrc` (loads tokens, aliases, prompt);
    - install the plugin: in Claude Code run `/plugin marketplace add ~/projects/am_plr`, then `/plugin install am-plr@am-plr`;
    - keep am_plr the first folder in `workspaces/*.code-workspace`, so `am_plr/.mcp.json` loads;
-   - review the Claude Code / VS Code settings with the printed `diff`, then run the printed `cp`;
+   - review the Claude Code / VS Code settings with the printed `diff`, then run the printed `cp`. On a new machine
+     (no `~/.claude/settings.json`) the blueprint is copied as is: put your token in place of
+     `<YOUR_ANTHROPIC_AUTH_TOKEN>`;
    - optional: add MCP servers to `am_plr/.mcp.json` (not `~/.claude.json`): my own from
      `artifacts/generated/mcp.json`, team ones as their docs describe (`perfect-project/cats2/docs/mcp-setup.md`).
 3. **Restart** the terminal, VS Code and Claude Code. Check with `/plugin`, `/mcp` and `/skills`.
@@ -66,7 +68,7 @@ agents/<name>.md                my subagents -> am-plr:<name>
 rules/*.md                      my rules, loaded in every session (`paths:` frontmatter to scope)
 mcp/<name>/                     code of my own MCP servers (configured in upstreams.toml)
 upstreams.toml                  team repos I follow, my own MCP servers, links to team MCP docs
-config/claude/settings.json     model, effort, permissions I want everywhere
+config/claude/settings.json     Claude Code blueprint: gateway env (token = placeholder), model, permissions, plugin
 config/vscode/settings.json     editor settings I want everywhere (autosave, 120 ruler, terminal, Python)
 shell/*.zsh                     aliases, functions, prompt; loaded by shell/init.zsh (sourced from ~/.zshrc)
 .env                            tokens for my own MCP servers, git-ignored (template: .env.example); loaded by shell/init.zsh
@@ -97,3 +99,4 @@ workspaces/*.code-workspace     VS Code multi-folder workspaces
 | add a machine-only PATH | `~/.zshrc` / `~/.zprofile` (outside git) | new terminal |
 
 Removing a key from `config/*settings.json` does **not** remove it from your settings. Delete it there by hand.
+`<YOUR_...>` placeholders in `config/` never overwrite a real value and never count as a difference.

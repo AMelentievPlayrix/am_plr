@@ -1,4 +1,10 @@
 {
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://litellm.playrix.com",
+    "ANTHROPIC_AUTH_TOKEN": "<YOUR_ANTHROPIC_AUTH_TOKEN>",
+    "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "1",
+    "API_FORCE_IDLE_TIMEOUT": "0"
+  },
   "model": "opus[1m]",
   "effortLevel": "high",
   "modelSettings": {
@@ -16,5 +22,16 @@
       "mcp__asana__asana_create_task",
       "mcp__asana__asana_create_task_story"
     ]
+  },
+  "extraKnownMarketplaces": {
+    "am-plr": {
+      "source": {
+        "source": "directory",
+        "path": "${AM_PLR}"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "am-plr@am-plr": true
   }
 }
