@@ -25,7 +25,7 @@ Needs [uv](https://docs.astral.sh/uv/) and `jq`.
      (no `~/.claude/settings.json`) the blueprint is copied as is: put your token in place of
      `<YOUR_ANTHROPIC_AUTH_TOKEN>`;
    - optional: add new MCP servers to `am_plr/.mcp.json` (my own ones are generated in `artifacts/generated/mcp.json`).
-3. **Restart** the terminal, VS Code and Claude Code. Check with `/plugin`, `/mcp` and `/skills`.
+3. **Restart** the terminal and Claude Code (in VS Code: **Developer: Reload Window**). Check with `/plugin`, `/mcp` and `/skills`.
 4. Run setup again: when everything is in place it prints **All set**.
 
 ### What setup does by itself

@@ -400,7 +400,7 @@ def main():
             print(f"\n  {B}{i}. {title}{N}")
             for line in lines:
                 print(f"     {line}")
-        print(f"\n  {B}{len(todo) + 1}. Restart Claude Code{N}, then check with /plugin, /mcp and /skills.")
+        print(f"\n  {B}{len(todo) + 1}. Restart Claude Code{N} (VS Code: Developer: Reload Window), then check /plugin, /mcp, /skills.")
     else:
         print(f"\n  {G}All set.{N} Skill/rule edits are live (/reload-plugins in an open session).")
     info("Re-run setup after editing config/, upstreams.toml, .env, or pulling upstream repos.")
