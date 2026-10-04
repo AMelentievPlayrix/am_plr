@@ -20,10 +20,16 @@ Plan mode is on when the session's system messages say so (they name the plan fi
 - **The user declines or does not switch** → stop. Reply in one line that this skill only works in plan mode,
   and do nothing else.
 
-## 2. Understand the request
+## 2. Clarify before starting
 
-If the goal or scope is unclear in a way that would change the plan, ask (AskUserQuestion, concrete options)
-before analysing. Otherwise proceed and list assumptions in the plan.
+Before reading code or writing anything, make sure the request is clear. Check the goal, scope (what is in and
+out), expected behaviour, constraints (compatibility, performance, deadlines), and what "done" looks like.
+
+- Anything unclear or ambiguous that would change the plan → ask first, with AskUserQuestion: concrete
+  options, your recommended one first. Ask all such questions now, in as few rounds as possible.
+- Wait for the answers before going on. Don't fill gaps with guesses.
+- If questions come up later while reading the code, ask them too before writing the plan.
+- Only things that truly don't affect the plan may be assumed; list those under assumptions in the plan.
 
 ## 3. Analyse before writing
 
