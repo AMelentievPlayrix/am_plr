@@ -6,9 +6,8 @@ Layering:
   skills/agents  shipped as the Claude Code plugin "am-plr" (this repo): namespaced as
                  am-plr:<skill>, so they never collide with upstream project skills.
   rules          plugins can't ship rules -> linked as one dir ~/.claude/rules/am_plr.
-  mcp            user scope (generated commands); a repo's own .mcp.json still wins inside it.
-                 Not in the plugin: plugin servers get tool names mcp__plugin_am-plr_<server>__*,
-                 which would break upstream skills that call mcp__qase__* etc.
+  mcp            only MY OWN servers (upstreams.toml [mcp.*]) -> generated file to copy into user
+                 config. Team servers stay configured in their repos; setup points to their docs.
 """
 
 import json
@@ -77,12 +76,13 @@ def visible(p: Path):
 def load_config():
     cfg_file = REPO / "upstreams.toml"
     if not cfg_file.is_file():
-        return {}, {}
+        return {}, {}, []
     cfg = tomllib.loads(cfg_file.read_text())
     upstreams = {}
     for name, u in cfg.get("upstream", {}).items():
         upstreams[name] = Path(os.path.expanduser(u["path"])).resolve()
-    return upstreams, cfg.get("mcp", {})
+    docs = [Path(os.path.expanduser(d)) for d in cfg.get("mcp_docs", [])]
+    return upstreams, cfg.get("mcp", {}), docs
 
 
 def check_plugin():
@@ -244,103 +244,85 @@ def settings_todo(previews):
 
 # ----------------------------------------------------------------------------- mcp
 
-def subst(v, root=None):
-    """Fill ${root} / ${AM_PLR} / ${HOME}. Token ${VAR}s stay as-is: Claude Code expands them at runtime."""
+def subst(v):
+    """Fill ${AM_PLR} / ${HOME}. Token ${VAR}s stay as-is: Claude Code expands them at runtime."""
     if isinstance(v, list):
-        return [subst(x, root) for x in v]
+        return [subst(x) for x in v]
     if isinstance(v, dict):
-        return {k: subst(x, root) for k, x in v.items()}
+        return {k: subst(x) for k, x in v.items()}
     if not isinstance(v, str):
         return v
-    v = v.replace("${AM_PLR}", str(REPO)).replace("${HOME}", str(Path.home()))
-    return v.replace("${root}", str(root)) if root is not None else v
+    return v.replace("${AM_PLR}", str(REPO)).replace("${HOME}", str(Path.home()))
 
 
 def env_refs(server):
     return sorted(set(re.findall(r"\$\{([A-Za-z_][A-Za-z0-9_]*)", json.dumps(server))))
 
 
-def build_mcp(upstreams, mcp_specs):
-    """Every [mcp.<name>] block in upstreams.toml -> one entry in artifacts/generated/mcp.json.
-
-    `from = "<upstream>"` makes ${root} that repo's path; without it the server is our own (code in mcp/).
-    `manual = "..."` prints instructions instead; `install = "..."` is a hint while `command` is missing.
-    """
-    servers, manual = {}, {}
+def build_mcp(mcp_specs):
+    """My own [mcp.<name>] blocks in upstreams.toml -> artifacts/generated/mcp.json. Team servers stay upstream."""
+    servers = {}
     for name, spec in mcp_specs.items():
         spec = dict(spec)
-        src = spec.pop("from", None)
-        root = upstreams.get(src) if src else REPO
-        if root is None or not root.is_dir():
-            warn(f"mcp '{name}' skipped: upstream '{src}' not found ({root})")
-            continue
-        if "manual" in spec:
-            manual[name] = (src or "am_plr", subst(spec["manual"], root))
-            info(f"mcp '{name}' needs manual setup, see below")
-            continue
         install = spec.pop("install", None)
-        server = {"type": "http" if "url" in spec else "stdio", **subst(spec, root)}
+        server = {"type": "http" if "url" in spec else "stdio", **subst(spec)}
         cmd = server.get("command", "")
         if cmd.startswith("/") and not Path(cmd).exists():
-            hint = install or (f"set up the {src} venv, e.g. `uv sync` there" if src else "install it")
-            warn(f"mcp '{name}': {cmd} does not exist yet ({hint})")
+            warn(f"mcp '{name}': {cmd} does not exist yet ({install or 'install it'})")
         servers[name] = server
         refs = env_refs(server)
-        ok(f"mcp '{name}' ({src or 'am_plr'})" + (f" - token(s) from .env: {', '.join(refs)}" if refs else ""))
+        ok(f"mcp '{name}'" + (f" - token(s) from .env: {', '.join(refs)}" if refs else ""))
 
     GEN_DIR.mkdir(parents=True, exist_ok=True)
     MCP_JSON.write_text(json.dumps({"mcpServers": servers}, indent=2) + "\n")
-    return servers, manual
+    return servers
 
 
-def check_skill_mcp_refs(servers, manual, skill_dirs):
-    """Warn when skills call mcp__<server>__ that no config provides."""
-    known = set(servers) | set(manual)
+def check_skill_mcp_refs(servers, skill_dirs):
+    """Team MCP servers my skills call (qase, cats-mcp-server, ...) that aren't in user config yet."""
+    known = set(servers)
     try:
         known |= set(json.loads(CLAUDE_JSON.read_text()).get("mcpServers") or {})
     except (OSError, json.JSONDecodeError):
         pass
+    missing = set()
     for skill_dir in skill_dirs:
-        refs = set()
         for f in skill_dir.rglob("*.md"):
-            refs |= set(re.findall(r"mcp__([A-Za-z0-9_-]+?)__", f.read_text(encoding="utf-8", errors="ignore")))
-        for r in sorted(refs - known):
-            warn(f"skill '{skill_dir.name}' calls mcp__{r}__* but no MCP server '{r}' is configured")
+            missing |= set(re.findall(r"mcp__([A-Za-z0-9_-]+?)__", f.read_text(encoding="utf-8", errors="ignore")))
+    return sorted(missing - known)
 
 
-def mcp_todo(servers, manual):
-    """Compare with user-scope MCP config and queue what to copy. Nothing is written."""
+def team_mcp_todo(docs, missing):
+    """am_plr prepares only my own servers; say where team servers go if you want them too."""
+    lines = [f"Add them to the top-level \"mcpServers\" of {CLAUDE_JSON}, next to yours, as their docs describe:"]
+    lines += [f"  {str(d).replace(str(Path.home()), '~', 1)}" for d in docs if d.is_file()]
+    if missing:
+        lines.append(f"Your am-plr skills use: {', '.join(missing)} (not in your config yet)")
+    todo.append(("Optional: extend with team MCP servers (qase, cats-mcp-server, teamcity, ...)", lines))
+
+
+def mcp_todo(servers):
+    """Compare my servers with user-scope MCP config and queue what to copy. Nothing is written."""
     try:
         current = json.loads(CLAUDE_JSON.read_text()).get("mcpServers") or {}
     except (OSError, json.JSONDecodeError):
         current = {}
     strip = lambda s: {k: v for k, v in s.items() if k != "type"}
-    new = [n for n in servers if n not in current]
-    changed = [n for n in servers if n in current and strip(current[n]) != strip(servers[n])]
-    stale = [n for n, s in current.items() if n not in servers and str(REPO) in json.dumps(s)]
+    todo_names = [n for n in servers if strip(current.get(n, {})) != strip(servers[n])]
     for n in servers:
-        mark = f"{G}+ new{N}" if n in new else f"{Y}~ differs{N}" if n in changed else f"{D}= in sync{N}"
-        print(f"    {n}: {mark}")
-    for n in stale:
-        print(f"    {n}: {R}- no longer in am_plr{N}")
-
-    if new or changed or stale:
-        names = ", ".join(new + changed)
-        lines = [f"Copy the servers you want ({names}) from {MCP_JSON}",
-                 f"into the top-level \"mcpServers\" of {CLAUDE_JSON} (keep your existing entries).",
-                 "Close Claude Code first: it rewrites that file while running."]
-        if stale:
-            lines.append(f"Remove from there (no longer in am_plr): {', '.join(stale)}")
-        todo.append(("Add MCP servers (all projects)", lines))
-    for n, (src, text) in manual.items():
-        if n not in current:
-            todo.append((f"Set up MCP '{n}' by hand (from {src})", text.strip().splitlines()))
+        print(f"    {n}: " + (f"{Y}to add / update{N}" if n in todo_names else f"{D}in sync{N}"))
+    if todo_names:
+        todo.append(("Add my MCP servers (all projects)", [
+            f"Copy {', '.join(todo_names)} from {MCP_JSON}",
+            f"into the top-level \"mcpServers\" of {CLAUDE_JSON} (keep your existing entries).",
+            "Close Claude Code first: it rewrites that file while running.",
+        ]))
 
 
 # ----------------------------------------------------------------------------- main
 
 def main():
-    upstreams, mcp_specs = load_config()
+    upstreams, mcp_specs, mcp_docs = load_config()
 
     step("Plugin (skills, agents) -> Claude Code")
     remove_old_links()
@@ -356,15 +338,15 @@ def main():
     check_shell()
 
     step(f"MCP -> {MCP_JSON}")
-    servers, manual = build_mcp(upstreams, mcp_specs)
+    servers = build_mcp(mcp_specs)
     check_secrets(servers)
-    check_skill_mcp_refs(servers, manual, skill_dirs)
-    mcp_todo(servers, manual)
+    mcp_todo(servers)
+    team_mcp_todo(mcp_docs, check_skill_mcp_refs(servers, skill_dirs))
 
     step("Done" + (f" with {len(warnings)} warning(s)" if warnings else ""))
     for w in warnings:
         print(f"  {Y}!{N} {w}")
-    order = ("Create .env", "Fill in", "Load tokens", "Install the am-plr", "Add MCP", "Set up MCP", "Review")
+    order = ("Create .env", "Fill in", "Load tokens", "Install the am-plr", "Add my MCP", "Review", "Optional")
     todo.sort(key=lambda t: next((i for i, p in enumerate(order) if t[0].startswith(p)), len(order)))
     if todo:
         print(f"\n{B}Next steps{N} - setup changed nothing outside ~/.claude/rules; run these yourself:")

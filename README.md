@@ -4,7 +4,7 @@ My personal Claude Code + VS Code + shell setup, applied to all projects at once
 It sits **on top of** team repos (perfect-project, vso-engine-autotests) and never conflicts with them.
 
 - **Skills** ship as a Claude Code plugin, `am-plr`. Use them in any project as `/am-plr:<skill>`.
-- **Rules, MCP servers, settings, shell** are prepared by `scripts/setup.sh`.
+- **Rules, my own MCP servers, settings, shell** are prepared by `scripts/setup.sh`.
 
 ## Setup, step by step
 
@@ -18,9 +18,11 @@ Needs [uv](https://docs.astral.sh/uv/) and `jq`.
    - create `.env` from `.env.example` and fill in the tokens (git-ignored);
    - add `source ~/projects/am_plr/shell/init.zsh` to `~/.zshrc` (loads tokens, aliases, prompt);
    - install the plugin: in Claude Code run `/plugin marketplace add ~/projects/am_plr`, then `/plugin install am-plr@am-plr`;
-   - copy the MCP servers you want from `artifacts/generated/mcp.json` into `"mcpServers"` of `~/.claude.json`
-     (keep your existing entries; close Claude Code first). Asana needs a one-time manual OAuth step, also printed;
-   - review the Claude Code / VS Code settings with the printed `diff`, then run the printed `cp`.
+   - copy my MCP servers from `artifacts/generated/mcp.json` into `"mcpServers"` of `~/.claude.json`
+     (keep your existing entries; close Claude Code first);
+   - review the Claude Code / VS Code settings with the printed `diff`, then run the printed `cp`;
+   - optional: add team MCP servers (qase, cats-mcp-server, …) to the same `"mcpServers"` as their repos' docs
+     describe (`perfect-project/cats2/docs/mcp-setup.md`). The engine skills need `qase` and `cats-mcp-server`.
 3. **Restart** the terminal, VS Code and Claude Code. Check with `/plugin`, `/mcp` and `/skills`.
 4. Run setup again: when everything is in place it prints **All set**.
 
@@ -29,7 +31,7 @@ Needs [uv](https://docs.astral.sh/uv/) and `jq`.
 | Done automatically | Where |
 |---|---|
 | My rules (`rules/*.md`) loaded in every project | symlink `~/.claude/rules/am_plr` |
-| MCP config generated | `artifacts/generated/mcp.json` |
+| Config for my own MCP servers generated | `artifacts/generated/mcp.json` |
 | Claude Code / VS Code settings generated (yours + am_plr keys) | `artifacts/generated/{claude,vscode}-settings.json` |
 | Checks: plugin installed, tokens set, `~/.zshrc` sources am_plr, skills call only configured MCP servers | printed as warnings / next steps |
 
@@ -61,7 +63,7 @@ skills/<name>/SKILL.md          my skills -> /am-plr:<name> in every project
 agents/<name>.md                my subagents -> am-plr:<name>
 rules/*.md                      my rules, loaded in every session (`paths:` frontmatter to scope)
 mcp/<name>/                     code of my own MCP servers (configured in upstreams.toml)
-upstreams.toml                  team repos I follow + all MCP servers (theirs and mine)
+upstreams.toml                  team repos I follow, my own MCP servers, links to team MCP docs
 config/claude/settings.json     model, effort, permissions I want everywhere
 config/vscode/settings.json     editor settings I want everywhere (autosave, 120 ruler, terminal, Python)
 shell/*.zsh                     aliases, functions, prompt; loaded by shell/init.zsh (sourced from ~/.zshrc)
@@ -73,9 +75,8 @@ workspaces/*.code-workspace     VS Code multi-folder workspaces
 
 - **Team skills/agents/rules stay in their repos** and load from there. am_plr never copies them.
 - **Skills**: plugin skills are namespaced (`am-plr:commit`), so they can't hide a team skill.
-- **MCP**: servers are added at user scope with the same names the team skills use (`qase`, `cats-mcp-server`, …).
-  A repo's own `.mcp.json` still wins inside that repo. They aren't shipped in the plugin, because plugin
-  servers get prefixed tool names (`mcp__plugin_am-plr_qase__…`) that the team skills don't call.
+- **MCP**: am_plr prepares only my own servers. Team servers stay owned by their repos; you add them to the same
+  user config from their docs, under the names their skills call (`qase`, `cats-mcp-server`, …).
 - **Settings**: common settings live in am_plr; project-specific ones (interpreter, pytest args, launch.json)
   stay in each project's `.vscode/`. Generated files add am_plr keys on top of yours and drop nothing.
 
@@ -87,10 +88,10 @@ workspaces/*.code-workspace     VS Code multi-folder workspaces
 | add / rename / delete a skill | change `skills/<name>/` | `/reload-plugins` |
 | change editor / Claude settings | edit `config/` | re-run setup, copy the printed command |
 | add my own MCP server | code in `mcp/<name>/` (deps inline, `uv run --script`) + `[mcp.<name>]` in `upstreams.toml` | re-run setup, copy it from `mcp.json` |
-| use a team repo's MCP server | add `[mcp.<name>]` to `upstreams.toml` | re-run setup, copy it from `mcp.json` |
+| use a team repo's MCP server | add it to `"mcpServers"` of `~/.claude.json` from that repo's docs | restart Claude Code |
 | follow another team repo | add `[upstream.<name>]` to `upstreams.toml` | re-run setup |
 | add an alias / shell function | new or existing `shell/<NN>-name.zsh` (loaded in name order) | new terminal |
-| add a token | `.env` (+ the name in `.env.example`), use as `${VAR}` in MCP config | new terminal, re-run setup |
+| add a token for my MCP server | `.env` (+ the name in `.env.example`), use as `${VAR}` in `upstreams.toml` | new terminal, re-run setup |
 | add a machine-only PATH | `~/.zshrc` / `~/.zprofile` (outside git) | new terminal |
 
 Removing a key from `config/*settings.json` does **not** remove it from your settings. Delete it there by hand.

@@ -1,7 +1,15 @@
-# Team repos that am_plr is layered on, and every MCP server am_plr sets up.
+# Team repos that am_plr is layered on, and my own (custom) MCP servers.
 #
 # Upstream skills/agents/rules stay in their repos and load as project scope. Our skills come
 # from the am-plr plugin (namespaced am-plr:<skill>), so the two never collide.
+
+# Team MCP servers (qase, cats-mcp-server, teamcity, ...) are not prepared by am_plr. To use them,
+# add them to the top-level "mcpServers" of ~/.claude.json as these docs describe. setup.sh prints
+# this list. (Must stay above the first [table] so TOML keeps it top-level.)
+mcp_docs = [
+  "~/projects/perfect-project/cats2/docs/mcp-setup.md",
+  "~/projects/vso-engine-autotests/docs/README_MCP.md",
+]
 
 [upstream.perfect-project]
 path = "~/projects/perfect-project"
@@ -10,49 +18,12 @@ path = "~/projects/perfect-project"
 path = "~/projects/vso-engine-autotests"
 
 # ---------------------------------------------------------------------------------------
-# MCP servers: every [mcp.<name>] block becomes one entry in artifacts/generated/mcp.json.
-# Server names are what skills call as mcp__<name>__<tool>; keep upstream ones equal to upstream.
+# My own MCP servers: each [mcp.<name>] block becomes one entry in artifacts/generated/mcp.json.
+# Code for servers I write lives in mcp/<name>/.
 #
-#   from = "<upstream>"  server lives in that repo (${root} = its path); omit for our own (mcp/<name>/)
-#   ${root}, ${AM_PLR}, ${HOME} are filled in by setup. Any other ${VAR} (tokens) stays as-is and
-#   Claude Code expands it at runtime from the env (shell/init.zsh loads am_plr/.env).
-#   manual = "..."   can't be expressed as JSON -> print these instructions instead
+#   ${AM_PLR}, ${HOME} are filled in by setup. Any other ${VAR} (tokens) stays as-is and Claude Code
+#   expands it at runtime from the env (shell/init.zsh loads am_plr/.env).
 #   install = "..."  hint printed while `command` does not exist yet
-
-[mcp.qase]
-# cats2 qase is a superset of vso-engine-autotests/ai/mcp_servers/qase (5 tools vs 1)
-from = "perfect-project"
-command = "${root}/cats2/.venv/bin/python"
-args = ["${root}/cats2/ai/mcp_servers/qase/qase-mcp-server.py"]
-env = { QASE_API_TOKEN = "${QASE_API_TOKEN}" }
-
-[mcp.cats-mcp-server]
-from = "perfect-project"
-command = "${root}/cats2/.venv/bin/python"
-args = ["${root}/cats2/ai/mcp_servers/cats/cats-mcp-server.py"]
-
-[mcp.teamcity]
-from = "perfect-project"
-command = "${root}/cats2/.venv/bin/python"
-args = ["${root}/cats2/ai/mcp_servers/teamcity/teamcity-mcp-server.py"]
-env = { TEAMCITY_TOKEN = "${TEAMCITY_TOKEN}" }
-
-[mcp.victoriametrics]
-from = "perfect-project"
-command = "${root}/cats2/.venv/bin/python"
-args = ["${root}/cats2/ai/mcp_servers/victoriametrics/victoriametrics-mcp-server.py"]
-
-[mcp.asana]
-from = "perfect-project"
-manual = """OAuth app needed (see ${root}/cats2/docs/mcp-setup.md, section 4):
-claude mcp add asana -s user --transport http --client-id <CLIENT_ID> --client-secret --callback-port 8080 https://mcp.asana.com/v2/mcp"""
-
-[mcp.reportportal]
-from = "perfect-project"
-install = "download the darwin_arm64 binary from https://github.com/reportportal/reportportal-mcp-server/releases"
-command = "${HOME}/reportportal-mcp-server/reportportal-mcp-server"
-args = ["stdio"]
-env = { RP_API_TOKEN = "${RP_API_TOKEN}", RP_HOST = "https://qa-reportportal.local.playrix.com", RP_PROJECT = "VSO" }
 
 [mcp.grafana]
 command = "${HOME}/.local/bin/uvx"
