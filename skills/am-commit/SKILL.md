@@ -1,6 +1,6 @@
 ---
-name: commit
-description: Split the current uncommitted changes into several independent, logically-scoped commits instead of one big commit. Use when asked to "commit this", "commit in logical parts", or before opening a PR when changes touch several unrelated things. Also invoked by the describe_work skill to commit pending changes before filing a task/PR.
+name: am-commit
+description: Split the current uncommitted changes into several independent, logically-scoped commits instead of one big commit. Use when asked to "commit this", "commit in logical parts", or before opening a PR when changes touch several unrelated things. Also invoked by the am-describe-work skill to commit pending changes before filing a task/PR.
 argument-hint: "[optional: scope/path to limit which changes get committed]"
 ---
 

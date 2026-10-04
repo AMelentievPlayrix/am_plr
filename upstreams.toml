@@ -2,20 +2,15 @@
 #
 # Upstream skills/agents/rules stay in their repos and are loaded by Claude Code as
 # project scope (when you work in / add that repo). am_plr adds personal-scope items on
-# top, and setup.sh refuses to link an am_plr skill/agent whose name collides with an
-# upstream one (personal scope would silently shadow it). Pull upstream as usual; just
-# re-run setup.sh to re-check collisions and MCP paths.
+# top, all named am-<name>. If one still collides with an upstream name (personal scope
+# would silently hide theirs), setup.sh reports it and asks to rename ours. Pull upstream
+# as usual; just re-run setup.sh to re-check collisions and MCP paths.
 
 [upstream.perfect-project]
 path = "~/projects/perfect-project"
 
 [upstream.vso-engine-autotests]
 path = "~/projects/vso-engine-autotests"
-
-# Names that am_plr is *allowed* to shadow on purpose (skill/agent names).
-[override]
-skills = []
-agents = []
 
 # ---------------------------------------------------------------------------------------
 # MCP servers taken from upstream repos (they run from the upstream venv, not am_plr's).

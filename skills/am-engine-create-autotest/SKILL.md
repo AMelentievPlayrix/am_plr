@@ -1,5 +1,5 @@
 ---
-name: vso-create-autotest
+name: am-engine-create-autotest
 description: Create a new VSO engine autotest from a Qase test case — read the case over Qase MCP, implement it against existing steps, validate it on every applicable platform, open a pull request, and post a summary comment to Asana. Use for "automate VSO-12345", "write an autotest for Qase case 12345".
 disable-model-invocation: true
 ---
@@ -20,7 +20,7 @@ structure, steps, platform logic, tagging and SDK-specific behaviour.
 
 ## Do not use this when
 
-- An existing test is broken and must be repaired → use `/vso-fix-autotest`.
+- An existing test is broken and must be repaired → use `/am-engine-fix-autotest`.
 - The work is pure framework/steps refactoring with no new test.
 - The request needs a product-code change rather than test automation.
 

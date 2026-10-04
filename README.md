@@ -38,7 +38,7 @@ Setup only generates files in `artifacts/generated/` and prints how to apply the
 ## What lives where
 
 ```
-skills/<name>/SKILL.md          my skills              -> every project
+skills/am-<name>/SKILL.md       my skills (always am- prefix) -> every project
 agents/<name>.md                my subagents           -> every project
 rules/*.md                      my rules (Claude reads only .md; `paths:` frontmatter to scope)
 mcp/<name>/                     my MCP servers: server.py (+ requirements.txt, config.json)
@@ -52,8 +52,8 @@ upstreams.toml                  team repos I follow + their MCP servers
 ## How conflicts are avoided
 
 - **Team skills/agents/rules stay in their repos** and load from there. am_plr never copies them.
-- **Same skill/agent name as a team one** would hide the team version, so setup refuses to link it.
-  To do it on purpose, list the name under `[override]` in `upstreams.toml`.
+- **Our skills are named `am-<name>`**, so they don't collide with team ones. If one still does (it would hide
+  the team version in every project), setup reports it and asks to rename ours. It's never linked as-is.
 - **MCP**: a repo's own `.mcp.json` always wins over user-level config, so team config can't break.
 - **Settings**: common settings live in am_plr; project-specific ones (interpreter, pytest args, launch.json)
   stay in each project's `.vscode/`. Generated files add am_plr keys on top of yours and drop nothing.
@@ -63,7 +63,7 @@ upstreams.toml                  team repos I follow + their MCP servers
 | I want to…                         | Do                                                       | Re-run setup? |
 |------------------------------------|----------------------------------------------------------|---------------|
 | edit a skill / rule               | just edit it                                             | no            |
-| add / rename / delete a skill or agent | change `skills/` or `agents/`                         | yes           |
+| add / rename / delete a skill or agent | change `skills/am-<name>/` or `agents/`           | yes           |
 | change editor / Claude settings    | edit `config/`                                           | yes, then copy the printed command |
 | add my own MCP server              | `mcp/<name>/server.py` (+ `requirements.txt`)            | yes, then copy the printed command |
 | use a team repo's MCP server       | add `[mcp.<name>]` to `upstreams.toml`                   | yes, then copy the printed command |

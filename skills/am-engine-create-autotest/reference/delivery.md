@@ -1,6 +1,6 @@
 # Delivery: branch, commits, pull request, Asana comment, halt report
 
-Applies to both `/vso-create-autotest` and `/vso-fix-autotest`.
+Applies to both `/am-engine-create-autotest` and `/am-engine-fix-autotest`.
 
 ## Output language
 

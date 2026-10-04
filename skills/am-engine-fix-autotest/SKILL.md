@@ -1,5 +1,5 @@
 ---
-name: vso-fix-autotest
+name: am-engine-fix-autotest
 description: Repair a broken VSO engine autotest starting from an Asana task link — pull the task and failure evidence over Asana MCP, check whether it is already fixed upstream, find the root cause, fix it, validate, open a pull request, and post a summary comment to Asana. Use for "test X is broken", "fix this failing autotest", or a bare Asana link to a test-failure task.
 disable-model-invocation: true
 ---
@@ -11,7 +11,7 @@ Repair an existing test: task → evidence → root cause → fix → validate �
 Diagnosis method lives in [reference/diagnosis-playbook.md](reference/diagnosis-playbook.md).
 PR, Asana comment and halt-report templates live in [reference/delivery.md](reference/delivery.md).
 Authoring rules for any code you touch live in
-[../vso-create-autotest/reference/authoring-rules.md](../vso-create-autotest/reference/authoring-rules.md).
+[../am-engine-create-autotest/reference/authoring-rules.md](../am-engine-create-autotest/reference/authoring-rules.md).
 
 ## Use this when
 
@@ -21,7 +21,7 @@ Authoring rules for any code you touch live in
 
 ## Do not use this when
 
-- A brand-new test must be written from a Qase case → use `/vso-create-autotest`.
+- A brand-new test must be written from a Qase case → use `/am-engine-create-autotest`.
 - The failure is an app defect and no test change is warranted — diagnose, then report it
   as a defect instead of weakening the test.
 

@@ -4,8 +4,8 @@ Run via scripts/setup.sh (it creates the venv first). Stdlib only, Python 3.11+.
 
 Layering (Claude Code precedence):
   skills/agents  personal (~/.claude, ours) > project (upstream repo) -> a same-named
-                 am_plr item would SHADOW upstream, so it is refused unless listed in
-                 [override] of upstreams.toml.
+                 am_plr item would SHADOW upstream. Ours are named am-<name>; on a collision
+                 setup asks to rename ours and never links it as-is.
   rules          all levels load together -> linked as one dir ~/.claude/rules/am_plr.
   mcp            local > project (.mcp.json) > user (ours) -> upstream project config
                  always wins; we never write any MCP config, only print commands.
@@ -15,6 +15,7 @@ import json
 import os
 import re
 import shlex
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -81,12 +82,12 @@ def visible(p: Path):
 def load_config():
     cfg_file = REPO / "upstreams.toml"
     if not cfg_file.is_file():
-        return {}, {}, {}
+        return {}, {}
     cfg = tomllib.loads(cfg_file.read_text())
     upstreams = {}
     for name, u in cfg.get("upstream", {}).items():
         upstreams[name] = Path(os.path.expanduser(u["path"])).resolve()
-    return upstreams, cfg.get("override", {}), cfg.get("mcp", {})
+    return upstreams, cfg.get("mcp", {})
 
 
 def scan_upstream(root: Path):
@@ -106,19 +107,69 @@ def scan_upstream(root: Path):
 
 # ----------------------------------------------------------------------------- linking
 
-def sync_links(kind, items, dst: Path, upstream_names, allowed_overrides):
-    """items: {link_name: (source_path, logical_name)}; links them into dst, prunes ours."""
-    dst.mkdir(parents=True, exist_ok=True)
-    wanted = {}
+PREFIX = "am-"
+
+
+def ask(question):
+    """y/N prompt; False when not interactive (e.g. piped output, CI)."""
+    if not sys.stdin.isatty():
+        return False
+    try:
+        return input(f"  {Y}?{N} {question} [y/N] ").strip().lower() in ("y", "yes")
+    except EOFError:
+        return False
+
+
+def rename_skill(old: str, new: str):
+    """skills/<old> -> skills/<new>: moves the dir, sets frontmatter `name:`, fixes references in all skills."""
+    src, dst = REPO / "skills" / old, REPO / "skills" / new
+    if dst.exists():
+        raise FileExistsError(dst)
+    tracked = subprocess.run(["git", "-C", str(REPO), "ls-files", "--error-unmatch", str(src)],
+                             capture_output=True).returncode == 0
+    if tracked:
+        subprocess.run(["git", "-C", str(REPO), "mv", str(src), str(dst)], check=True)
+    else:
+        src.rename(dst)
+    skill_md = dst / "SKILL.md"
+    skill_md.write_text(re.sub(r"^name:.*$", f"name: {new}", skill_md.read_text(), count=1, flags=re.M))
+    o = re.escape(old)
+    if re.search(r"[-_]", old):  # distinctive name: replace every whole-token occurrence
+        patterns = [rf"(?<![\w-]){o}(?![\w-])"]
+    else:  # plain word like "commit": only where it clearly names the skill
+        patterns = [rf"(?<=/){o}(?![\w-])", rf"(?<=`){o}(?=` skill)", rf"(?<=the ){o}(?= skill)"]
+    for f in (REPO / "skills").rglob("*.md"):
+        text = f.read_text()
+        fixed = text
+        for p in patterns:
+            fixed = re.sub(p, new, fixed)
+        if fixed != text:
+            f.write_text(fixed)
+
+
+def resolve_collisions(kind, items, upstream_names):
+    """Ask to rename our skills that collide with an upstream one (personal scope would hide theirs)."""
+    resolved = {}
     for link_name, (src, logical) in sorted(items.items()):
         clash = upstream_names.get(logical) or upstream_names.get(link_name)
-        if clash and logical not in allowed_overrides and link_name not in allowed_overrides:
-            warn(f"{kind} '{logical}' NOT linked: would shadow upstream {clash} "
-                 f"(rename it, or add it to [override].{kind}s in upstreams.toml)")
+        if not clash:
+            resolved[link_name] = (src, logical)
             continue
-        if clash:
-            info(f"{kind} '{logical}' overrides upstream {clash} (allowed in upstreams.toml)")
-        wanted[link_name] = src
+        new = PREFIX + re.sub(r"[_\s]+", "-", link_name.removeprefix(PREFIX))
+        warn(f"{kind} '{logical}' collides with upstream {clash}: linking it would hide theirs in every project")
+        if kind == "skill" and not (REPO / "skills" / new).exists() and ask(f"Rename ours to '{new}'?"):
+            rename_skill(link_name, new)
+            ok(f"renamed skill '{link_name}' -> '{new}' (review with `git diff`, then commit)")
+            resolved[new] = (REPO / "skills" / new, new)
+        else:
+            warn(f"{kind} '{logical}' NOT linked - rename it (re-run setup in a terminal to get the prompt)")
+    return resolved
+
+
+def sync_links(kind, items, dst: Path, upstream_names):
+    """items: {link_name: (source_path, logical_name)}; links them into dst, prunes ours."""
+    dst.mkdir(parents=True, exist_ok=True)
+    wanted = {name: src for name, (src, _) in resolve_collisions(kind, items, upstream_names).items()}
 
     for link_name, src in wanted.items():
         target = dst / link_name
@@ -342,7 +393,7 @@ def finalize(server):
     return server
 
 
-def build_mcp(upstreams, overrides, upstream_mcp, upstream_project_mcp):
+def build_mcp(upstreams, upstream_mcp, upstream_project_mcp):
     servers, origin, manual = {}, {}, {}
 
     for name, spec in upstream_mcp.items():
@@ -378,9 +429,8 @@ def build_mcp(upstreams, overrides, upstream_mcp, upstream_project_mcp):
             info(f"mcp '{d.name}' disabled in config.json")
             continue
         name = cfg.pop("name", d.name)
-        if (name in servers or name in manual) and name not in overrides.get("mcp", []):
-            warn(f"mcp '{name}' (am_plr/mcp/{d.name}) skipped: name taken by upstream "
-                 f"(rename it, or add it to [override].mcp in upstreams.toml)")
+        if name in servers or name in manual:
+            warn(f"mcp '{name}' (am_plr/mcp/{d.name}) skipped: name taken by upstream - rename it")
             continue
         entry = next((d / e for e in ENTRYPOINTS + (f"{d.name}.py",) if (d / e).is_file()), None)
         server = {"command": str(VENV_PY), "args": [str(entry)]} if entry else {}
@@ -478,7 +528,7 @@ def print_mcp_instructions(servers, manual):
 # ----------------------------------------------------------------------------- main
 
 def main():
-    upstreams, overrides, upstream_mcp = load_config()
+    upstreams, upstream_mcp = load_config()
 
     step("Upstream repos (upstreams.toml)")
     up_skills, up_agents, up_mcp = {}, {}, {}
@@ -503,15 +553,18 @@ def main():
             warn(f"skill '{d.name}' skipped: no SKILL.md")
             continue
         skills[d.name] = (d, frontmatter_name(d / "SKILL.md") or d.name)
+        if not d.name.startswith(PREFIX):
+            warn(f"skill '{d.name}' has no '{PREFIX}' prefix - our skills are named {PREFIX}<name> "
+                 f"to never collide with upstream ones")
     step(f"Skills -> {CLAUDE_DIR / 'skills'}")
-    sync_links("skill", skills, CLAUDE_DIR / "skills", up_skills, overrides.get("skills", []))
+    sync_links("skill", skills, CLAUDE_DIR / "skills", up_skills)
 
     agents = {}
     for f in sorted((REPO / "agents").glob("*.md")) if (REPO / "agents").is_dir() else []:
         if visible(f) and f.name != "README.md":
             agents[f.name] = (f, frontmatter_name(f) or f.stem)
     step(f"Agents -> {CLAUDE_DIR / 'agents'}")
-    sync_links("agent", agents, CLAUDE_DIR / "agents", up_agents, overrides.get("agents", []))
+    sync_links("agent", agents, CLAUDE_DIR / "agents", up_agents)
 
     step(f"Rules -> {CLAUDE_DIR / 'rules' / 'am_plr'}")
     sync_rules()
@@ -521,7 +574,7 @@ def main():
     shell_line = check_shell()
 
     step(f"MCP -> {MCP_JSON}")
-    servers, manual = build_mcp(upstreams, overrides, upstream_mcp, up_mcp)
+    servers, manual = build_mcp(upstreams, upstream_mcp, up_mcp)
     check_secrets(servers)
     check_skill_mcp_refs(servers, manual, [src for src, _ in skills.values()])
 

@@ -1,5 +1,5 @@
 ---
-name: describe_work
+name: am-describe-work
 description: File an Asana task for a set of code changes, open a matching GitHub PR, and cross-link both. Use when asked to "describe the work", "write up these changes", or close out a change with a task+PR pair.
 disable-model-invocation: true
 argument-hint: "[optional: which changes/diff to describe]"
@@ -33,7 +33,7 @@ If it's ambiguous which part of the changes the task/PR should cover — e.g. th
 
 ### 2) Commit any uncommitted changes
 
-If `git status` shows uncommitted changes in the scope identified in step 1, call the **`commit`** skill yourself (via the Skill tool, `skill: "commit"`) on that scope before continuing — do this directly, don't ask the user to run `/commit` themselves and don't hand-roll a single commit here instead. The `commit` skill splits the changes into logical, reviewable commits with Russian commit messages.
+If `git status` shows uncommitted changes in the scope identified in step 1, call the **`commit`** skill yourself (via the Skill tool, `skill: "commit"`) on that scope before continuing — do this directly, don't ask the user to run `/am-commit` themselves and don't hand-roll a single commit here instead. The `am-commit` skill splits the changes into logical, reviewable commits with Russian commit messages.
 
 (If working on `master`/`main`, create a feature branch — following the repo's existing naming convention if visible in recent branches — *before* invoking `commit`, so the commits land on a branch, not on `master`.)
 
@@ -41,7 +41,7 @@ Once `commit` finishes, the branch's commit history is itself the most reliable 
 
 ### 3) Write two descriptions — Asana looks forward, the PR looks back
 
-Based on the same diff/commit log, write two distinct texts, both **in Russian** per the language rule above:
+Based on the same diff/am-commit log, write two distinct texts, both **in Russian** per the language rule above:
 
 - **Asana task text (prescriptive — what needs to be done):** phrase it as the goal or problem being addressed, like a task written *before* the work — not a changelog of the diff. Describe the need/requirement that the change satisfies, not a list of what was edited. E.g. "Нужно добавить валидацию X, чтобы ..." rather than "Добавлена валидация X".
 - **PR title/body text (retrospective — what was done):** phrase it as what was actually implemented/changed, matching the existing template's language (e.g. "Что поменялось для пользователей?").
