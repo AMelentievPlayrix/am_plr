@@ -1,0 +1,63 @@
+# Upstream repos that am_plr extends.
+#
+# Upstream skills/agents/rules stay in their repos and are loaded by Claude Code as
+# project scope (when you work in / add that repo). am_plr adds personal-scope items on
+# top, and setup.sh refuses to link an am_plr skill/agent whose name collides with an
+# upstream one (personal scope would silently shadow it). Pull upstream as usual; just
+# re-run setup.sh to re-check collisions and MCP paths.
+
+[upstream.perfect-project]
+path = "~/projects/perfect-project"
+
+[upstream.vso-engine-autotests]
+path = "~/projects/vso-engine-autotests"
+
+# Names that am_plr is *allowed* to shadow on purpose (skill/agent names).
+[override]
+skills = []
+agents = []
+
+# ---------------------------------------------------------------------------------------
+# MCP servers taken from upstream repos (they run from the upstream venv, not am_plr's).
+# Server names are what skills call as mcp__<name>__<tool>; keep them equal to upstream.
+#
+# Placeholders: ${root} = upstream path, ${AM_PLR} = this repo, ${AM_PLR_PYTHON} = .venv python,
+# Any other ${VAR} (tokens) is left as-is; Claude Code expands it at runtime from the env, which
+# shell/init.zsh fills from am_plr/.env. Setup warns about any ${VAR} that is empty in .env.
+# enabled = false -> skip;  manual = "..." -> can't be expressed as JSON, print instructions;
+# install = "..." -> hint printed while `command` does not exist yet.
+
+[mcp.qase]
+# cats2 qase is a superset of vso-engine-autotests/ai/mcp_servers/qase (5 tools vs 1)
+from = "perfect-project"
+command = "${root}/cats2/.venv/bin/python"
+args = ["${root}/cats2/ai/mcp_servers/qase/qase-mcp-server.py"]
+env = { QASE_API_TOKEN = "${QASE_API_TOKEN}" }
+
+[mcp.cats-mcp-server]
+from = "perfect-project"
+command = "${root}/cats2/.venv/bin/python"
+args = ["${root}/cats2/ai/mcp_servers/cats/cats-mcp-server.py"]
+
+[mcp.teamcity]
+from = "perfect-project"
+command = "${root}/cats2/.venv/bin/python"
+args = ["${root}/cats2/ai/mcp_servers/teamcity/teamcity-mcp-server.py"]
+env = { TEAMCITY_TOKEN = "${TEAMCITY_TOKEN}" }
+
+[mcp.victoriametrics]
+from = "perfect-project"
+command = "${root}/cats2/.venv/bin/python"
+args = ["${root}/cats2/ai/mcp_servers/victoriametrics/victoriametrics-mcp-server.py"]
+
+[mcp.asana]
+from = "perfect-project"
+manual = """OAuth app needed (see ${root}/cats2/docs/mcp-setup.md, section 4):
+claude mcp add asana -s user --transport http --client-id <CLIENT_ID> --client-secret --callback-port 8080 https://mcp.asana.com/v2/mcp"""
+
+[mcp.reportportal]
+from = "perfect-project"
+install = "download the darwin_arm64 binary from https://github.com/reportportal/reportportal-mcp-server/releases"
+command = "${HOME}/reportportal-mcp-server/reportportal-mcp-server"
+args = ["stdio"]
+env = { RP_API_TOKEN = "${RP_API_TOKEN}", RP_HOST = "https://qa-reportportal.local.playrix.com", RP_PROJECT = "VSO" }

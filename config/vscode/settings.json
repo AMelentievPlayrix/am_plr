@@ -1,0 +1,26 @@
+{
+    "editor.rulers": [120],
+    "editor.wordWrap": "on",
+    "editor.codeLens": true,
+    "editor.inlayHints.enabled": "off",
+
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 100,
+
+    "terminal.integrated.enablePersistentSessions": false,
+    "terminal.integrated.enableFileLinks": "on",
+    "terminal.integrated.wordSeparators": " ()[]{}',\"`─'│:<>",
+
+    "makefile.configureOnOpen": false,
+
+    "python.languageServer": "None",
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.diagnosticMode": "workspace",
+    "python.analysis.inlayHints.variableTypes": true,
+    "python.analysis.inlayHints.functionReturnTypes": true,
+    "python.analysis.inlayHints.callArgumentNames": "partial",
+    "python.analysis.indexing": true,
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false
+}

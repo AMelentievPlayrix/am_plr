@@ -1,0 +1,133 @@
+---
+description: Plan adding a UWP in-app purchase test that mirrors an existing iOS/macOS test
+alwaysApply: false
+---
+
+Your goal is to analyse an existing iOS (and, where present, macOS) in-app purchase test and produce a concrete plan for adding a UWP variant. You do **not** write or edit any files. Pseudo-code is allowed in the plan for clarity.
+
+## Important — platform-split is intentional
+
+iOS, macOS and UWP tests live as **separate `test_{id}_*_ios` / `test_{id}_*_mac` / `test_{id}_*_uwp` functions in the same file**, even when QASE describes a single scenario. Each platform may legitimately behave differently (UI, Microsoft Store flow, networking, engine response timing) — the split lets each test follow the actual platform behaviour rather than papering over it with `if PLATFORM_TO_RUN` guards or "tolerant" assertions. Divergence is acceptable; document it inline (`# TODO`, comment, or a Known-patterns note) when it appears.
+
+The macOS variant is usually the most complete reference (it already covers crash, network-loss, clock-shift and Amplitude scenarios). **Read both the iOS and macOS functions** before planning the UWP one — the macOS test is often a closer structural match than iOS because both are desktop/local.
+
+## Before you start
+If you are not in Plan mode switch to Plan mode.
+
+## Intake steps
+
+1. Extract the test ID from the user message (e.g. "10559" from "add uwp test for 10559").
+2. Find `tests/test_in_app_purchase/test_{id}_*.py` and read it fully — including the existing `_ios`, `_mac` and `_facebook` functions and shared `common_part*` helpers. If file not found STOP here and describe it in chat.
+3. Read the tool schema at
+   `/Users/playrix/.cursor/projects/Users-playrix-projects-vso-engine-autotests/mcps/user-qase-mcp-server/tools/get_test_case_data.json`,
+   then call `user-qase-mcp-server` → `get_test_case_data(project_code="VSO", test_case_id={id})`.
+4. Inspect the QASE steps for any platform-prefixed entries (e.g. `iOS:`, `macOS:`, `UWP:`/`Windows:`); note every difference relevant to UWP.
+5. Map each `step.system_ui.ios.*` / `step.system_ui.mac.*` call in the test file to its UWP equivalent using the tables below.
+6. Mark iOS/macOS-only intermediate steps (sandbox sign-in, already-purchased dialog, App Store auth, success-dialog OK click, `confirm_purchase(confirm=False)` cancel) as dropped or as **requiring a new UWP step** — most do not exist on UWP yet.
+7. Decide which new `step.system_ui.uwp.*` methods are required beyond what is listed in **Available UWP steps**. UWP currently has only two steps, so most non-trivial scenarios need new ones — propose them against the dialogs in **Available UWP dialogs**.
+8. Check the UWP feature limits in **UWP limitations** — some macOS scenarios (clock shift, break-mode crash recovery) have **no UWP infrastructure yet** and require a new code proposal or a STOP-and-ask.
+9. If everything is clear reply only with "Creating plan" in the chat.
+10. Produce the plan using the output spec below.
+
+## iOS → UWP step mapping
+
+| iOS step | UWP step |
+|---|---|
+| `ios.authenticate_appstore()` | `uwp.authenticate_uwp_store()` — handles the full Microsoft Store sign-in (account select → email → passkey dismiss → password → SSO consent); skips if the auth dialog does not appear |
+| `ios.confirm_sandbox_purchase()` | `uwp.confirm_purchase()` — clicks **Get** on the Microsoft Store purchase dialog |
+| `ios.authenticate_sandbox_purchase()` | *drop — folded into `authenticate_uwp_store()`* |
+| `ios.close_already_purchased_dialog()` | *drop — no UWP equivalent* |
+| `ios.close_purchase_success_dialog()` | *drop — UWP has no purchase-success dialog; `confirm_purchase()` clicking Get completes the flow* |
+| `ios.close_app_store_auth_dialog()` | *new UWP step required — no cancel/dismiss-auth step exists yet* |
+
+## macOS → UWP step mapping
+
+| macOS step | UWP step |
+|---|---|
+| `mac.authenticate_appstore()` | `uwp.authenticate_uwp_store()` |
+| `mac.confirm_purchase(confirm=True)` | `uwp.confirm_purchase()` |
+| `mac.confirm_purchase(confirm=False)` | *new UWP step required — no cancel-purchase step exists yet* |
+| `mac.dismiss_purchase_dialog_if_present()` | *new UWP step required — no optional-dismiss step exists yet* |
+| `mac.close_success_purchase_dialog(with_ok_button=True)` | *drop — UWP has no success dialog; the Get click in `confirm_purchase()` is terminal* |
+| `mac.close_success_purchase_dialog(break_mode=...)` | *no UWP equivalent — see **UWP limitations** (break-mode crash recovery not implemented)* |
+
+## Available UWP steps
+
+These methods already exist in `framework/test_management/test_steps/system_ui/uwp_system_ui_steps.py` (class `UwpSystemUiSteps`, decorator `@uwp_only_step`):
+
+- `uwp.authenticate_uwp_store() -> None` — handles the full Microsoft Store sign-in flow: authorization dialog (select Microsoft account + Continue) → email + Next → dismiss Windows Security passkey overlay if it appears → "Sign in another way" → "Use my password" → password + Sign in → SSO consent "Continue to sign in". Skips silently if the authorization dialog does not appear (already signed in). Uses `config.windows_store_email` / `config.windows_store_password`.
+- `uwp.confirm_purchase() -> None` — waits for the Microsoft Store purchase dialog and clicks **Get**. There is no success dialog and no wait-for-disappear on UWP; clicking Get is the terminal purchase action.
+
+## Available UWP dialogs (for proposing new steps)
+
+These dialogs are wired in `framework/services/ui_automation/platforms/uwp/ui_controller.py` and can back new `UwpSystemUiSteps` methods (`self._service_manager.ui_automation.<name>`):
+
+- `store_authorization_dialog` — `click_microsoft_account()`, `click_continue()`, `wait_for_dialog_appears(raise_on_timeout=...)`
+- `store_login_dialog` — email/password/passkey/SSO sub-flow (`enter_email`, `enter_password`, `click_next`, `click_sign_in_another_way`, `click_use_password`, `click_continue_to_sign_in`, `wait_for_*`)
+- `passkey_dialog` — `dismiss()`, `wait_for_dialog_appears(...)`
+- `purchase_dialog` (`UWPPurchaseDialog1`) — `click_get()`, `is_dialog_present`, `wait_for_dialog_appears()`
+- `purchase_dialog_2` (`UWPPurchaseDialog2`) — `click_next()` / `click_buy()`, `is_dialog_present` (payment-method "Next"/"Pay with" sheet)
+- `payment_method_dialog` — `click_credit_card()`, `click_ewallet()`, `click_mobile_phone()`, `click_gift_card()`, `click_back()`
+- `assert_dialog` — engine assert dialog handling
+
+When proposing a new UWP step, mirror the existing class structure: `@uwp_only_step` decorator, `wait_for_dialog_appears(raise_on_timeout=False)` for optional dialogs, and explicit logging.
+
+## Available UWP device steps
+
+In `framework/test_management/test_steps/device/device_steps.py` (work on UWP because it is a desktop platform — `Platform.desktop_platforms()` includes `UWP`):
+
+- `device.activate_app()` / `device.terminate_app()` / `device.restart_app()` — UWP app launch/kill via `explorer shell:AppsFolder\\{app_id}` and PowerShell `Stop-Process`.
+- `device.background_app_for_duration(duration, repeat=1)` — minimize/restore all windows.
+- `device.set_network_connection(NetworkEnabler/NetworkDisabler)` — toggles the Windows network adapter (`Disable-NetAdapter` / `Enable-NetAdapter`); drops the relay connection automatically when the value is a relay breaker.
+- `device.simulate_delay(duration, comment=None)` — sleep.
+
+## UWP limitations (check before proposing a port)
+
+- **System clock shift is NOT supported.** `WindowsBaseActions.set_custom_date` / `restore_system_date` raise `UnsupportedPlatformError`, and `device.mac_clock_shifted` is mac-only. A future-date test like test_11737 needs new Windows date-shift infrastructure before it can be ported — flag this in the plan, do not invent a context manager.
+- **Break-mode crash recovery is NOT implemented for UWP.** There is no UWP `close_success_purchase_dialog(break_mode=...)` and no UWP zombie/relay reaping like the macOS `Problem Reporter` flow. Crash tests (BEFORE_BUY may work because it crashes before any dialog; AFTER_BUY/VALIDATION/ACKNOWLEDGE/CONSUMPTION need UI-step crash handling) require new code — propose it explicitly or STOP and ask.
+- **No purchase-success dialog and no cancel step.** UWP `confirm_purchase()` only clicks Get; there is no success dialog and no `confirm(False)` path. Canceled-purchase and "dismiss if present" scenarios need new steps backed by the dialogs above.
+- **Amplitude / network-log scenarios** reuse the shared `step.common.*` / `step.app.marketing_tracker.*` steps (platform-agnostic); the platform-specific `StoreKitPaymentDiagnostic` / product-id constants differ — use `PLATFORM_PRODUCT_IDS[Platform.UWP]` and verify the Microsoft Store diagnostic string rather than copying the iOS/macOS value.
+
+If the planned test needs a UWP interaction not covered above, include a new method (or new infrastructure) proposal in the plan.
+
+## Plan output spec
+
+The plan must contain all of the following (no full code — pseudo-code permitted for clarity):
+
+1. **QASE summary** — title, type, importance, and any iOS/macOS vs UWP step differences found in step 4.
+2. **Function signature and decorator**:
+   - `@tag(Tag.PURCHASE, Tag.UWP, Tag.<TYPE>)`
+   - `def test_{id}_*_uwp(step: StepManager)`
+3. **Ordered step list** — each `step.*` call with a one-line description (pseudo-code style is fine).
+4. **New uwp steps needed** (if any) — name, signature, backing dialog, and brief behaviour description for each.
+5. **New infrastructure needed** (if any) — e.g. Windows date-shift, break-mode crash recovery — name the module and the gap; if it is large, STOP and ask before planning further.
+6. Any other new code needed.
+7. **`inapp_purchase_uwp.mdc` update** — state whether a new known-pattern entry should be added for this test.
+
+## Coding constraints (apply to anything proposed in the plan)
+
+- No `if PLATFORM_TO_RUN` guards — platform separation is via tagged functions only.
+- No `assert` statements — verifications only via `step.check.*` or `step.purchase.*`.
+- Tags must come from `framework/test_management/enums/common/tags.py` only.
+- Type hints on all params and returns except the test function return and `self`.
+- One `def test_{id}_*_uwp(step)` per file; `step` fixture only (no `data` unless the test is parametrised).
+- Dialog interactions only via `step.system_ui.uwp.*` — never import dialog classes in test files.
+
+## Reference example — test_5822
+
+```python
+@tag(Tag.PURCHASE, Tag.UWP, Tag.SMOKE)
+def test_5822_purchase_uwp(step: StepManager):
+    common_part(step=step)                        # request_products + request_buy_product
+    step.system_ui.uwp.authenticate_uwp_store()   # Microsoft Store sign-in if it appears
+    step.system_ui.uwp.confirm_purchase()         # click Get — terminal, no success dialog on UWP
+    common_part_verify_purchase(step=step)        # check money and payload result
+```
+
+## Known UWP quirks
+
+Placeholder. Record UWP-specific runtime quirks here as they are discovered while porting tests (e.g. `ApplicationFrameHost` window-title detection, Microsoft Store sign-in / passkey overlay timing). Do **not** copy macOS quirks — UWP findings will be added as real tests are ported.
+
+## Known patterns
+
+- **test_5822** — basic purchase: `common_part` (request_products + request_buy_product) → `authenticate_uwp_store()` → `confirm_purchase()` → `common_part_verify_purchase` (money + payload). No success dialog on UWP — the Get click completes the purchase.

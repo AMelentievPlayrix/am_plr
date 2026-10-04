@@ -1,0 +1,41 @@
+---
+globs: *.py
+alwaysApply: false
+---
+<code_critical>
+- Provide complete, working, production-ready implementations
+- Consider security implications in all code changes
+- Implement full functionality without stubs or placeholders
+- Store secrets and passwords in environment variables or secure configuration
+</code_critical>
+
+<code_important>
+- Design modular code for maintainability and reuse
+- Follow SOLID, DRY, KISS, YAGNI principles
+- Extract common logic into reusable functions, classes, or modules
+- Prefer composition over inheritance
+- Use configuration or constants for values that may change
+</code_important>
+
+<code_best_practice>
+- Apply GoF and GRASP design patterns where appropriate
+</code_best_practice>
+
+<docs_critical>
+- Write self-documenting code with descriptive names for variables, functions, classes, and modules
+- Add comments only for: corner cases, non-obvious behavior, complex algorithms, or business logic rationale
+- Add docstrings only for: public APIs, complex interfaces, or functions with non-trivial contracts
+</docs_critical>
+
+<errors_critical>
+- Let exceptions propagate naturally unless specific handling is required
+- Use try/except only when: recovering from expected errors, transforming exceptions, or cleaning up resources
+- Catch specific exception types with explicit recovery actions
+</errors_critical>
+
+<logging_critical>
+- Add logging for: errors, warnings, important state changes, and external service interactions
+- Log at appropriate levels: DEBUG for diagnostics, INFO for significant events, WARNING for recoverable issues, ERROR for failures
+- Include relevant context in log messages (IDs, parameters, state)
+- Focus logs on meaningful events rather than obvious sequential operations
+</logging_critical>

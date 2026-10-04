@@ -1,0 +1,245 @@
+---
+alwaysApply: false
+---
+
+<code_generation_critical>
+- All generated Python code (steps, test files, helpers) must follow `code.mdc` and `python.mdc`
+- This covers: type hints (Python 3.10+ syntax), Black formatting (120 char line length, double quotes, 4-space indent), import order, class member order, naming, docstrings policy, and error handling
+</code_generation_critical>
+
+<workflow>
+1. Read test from QASE using qase-mcp-server
+2. Write test following rules below (SDK-specific rules apply automatically)
+3. Validate on all applicable platforms unless user explicitly requests skip:
+   - iOS, Android: always validate (run on BrowserStack)
+   - android_on_linux, ios_on_linux: validate only on macOS
+   - macOS: validate only on macOS
+   - UWP, Windows: validate only on Windows
+   
+   For EACH platform:
+   a) Update .env file: comment/uncomment lines in "# App config" section
+   b) Run `make ai-run-tests key=test_name platform_to_run=PLATFORM_TAG`
+   c) Fix and retry if failed (max 3 attempts per platform)
+   d) Validate only active (uncommented) code
+4. Revert .env file to initial state
+5. Add validation results to test file
+</workflow>
+
+<qase_critical>
+- Read test from QASE using qase-mcp-server with "VSO" project code
+- Treat QASE test case steps as PRIMARY SOURCE OF TRUTH for implementation
+- Include test_id in test name and file name (ask in chat if unclear)
+- Implement QASE preconditions:
+  -- If implementable with available steps → apply FIRST in test
+  -- If not implementable → add as commented code with explanation
+</qase_critical>
+
+<qase_important>
+- Add only required tags from QASE
+- When QASE shows platform-specific prefixes (e.g. "iOS:", "Android:"), analyze each step individually
+</qase_important>
+
+<test_structure_critical>
+- Create only new test files (one per test)
+- Use only "step" and "data" fixtures (or parametrization arguments if parametrized)
+- No `assert` statements in test functions — all verifications must be done via `step.check.*` methods
+- Implement all actions through existing steps
+- Modify only the test file being created
+- Write code without step comments or action explanations (e.g. "# Step 1: ...", "# Set user")
+- Add only verifications explicitly described in QASE expected results (widgets, logs, database checks)
+- Omit action state confirmations (e.g. "app is backgrounded") as these are implicit
+- Place database checks in separate test function (see SDK-specific rules)
+- When verification cannot be implemented, add as commented code with explanation
+- Include all QASE steps; if no implementation exists, add commented code with step number and explanation
+- Omit type hints for step, data, device fixtures
+</test_structure_critical>
+
+<test_structure_important>
+- Match code style of other tests in same directory
+- Reference existing test files for correct step usage patterns and examples
+</test_structure_important>
+
+<test_structure_best_practice>
+- Keep descriptions minimal
+- When uncertain, add as commented code with explanation
+</test_structure_best_practice>
+
+<step_usage_critical>
+- Use only existing steps from `framework/test_management/test_steps`
+- When new steps are needed, create them in the appropriate file under `framework/test_management/test_steps/`:
+  -- Names must be business-oriented — describe intent, not UI, API, or service mechanics (e.g., `confirm_purchase` not `purchase_success_dialog_click_ok`)
+  -- Use services and/or utils internally; no raw UI or API calls inline
+  -- May accept arguments when behavior varies by caller
+  -- Before writing, read existing steps in the target file to match structure and patterns
+- Verify step methods exist in actual implementation files before using
+- DECORATOR SAFETY CHECK (validation only):
+  -- Before using ANY step method, grep implementation to check decorators
+  -- `@ios_only_step` → Use ONLY for iOS platform
+  -- `@android_only_step` → Use ONLY for Android platform
+  -- `@bs_only_step` → Use ONLY for BrowserStack platforms (iOS, Android)
+  -- No platform decorator → Cross-platform, use for all platforms
+  -- If decorator conflicts with QASE requirements → Report in chat, add TODO comment
+</step_usage_critical>
+
+<step_usage_important>
+- Use only common steps and steps related to tested SDK
+- Refer to <steps_reference> for available step namespaces
+</step_usage_important>
+
+<platform_critical>
+PRIMARY SOURCE: QASE test case steps determine platform-specific logic
+
+NAMESPACE RULES for platform checks:
+- `step.app.*` → Omit platform check (app handles internally)
+- `step.device.*` → Add check ONLY if QASE specifies platform prefix
+- `step.<sdk>.*` (sentry/appsflyer) → Omit platform check (SDK handles internally)
+
+QASE INTERPRETATION ALGORITHM:
+1. Read QASE test step description carefully
+2. If step has platform prefix (e.g. "iOS: Tap Allow", "Android: Enable setting"):
+   a) Determine: app-level command vs device-level system interaction
+   b) App-level → Use `step.app.*` WITHOUT platform check
+   c) Device-level → Use `step.device.*` WITH platform check
+3. If NO platform prefix → Applies to ALL platforms:
+   a) Use `step.app.*` or `step.<sdk>.*` without checks
+   b) Use `step.device.*` without checks (if cross-platform)
+4. When QASE groups actions under platform section, analyze EACH separately
+</platform_critical>
+
+<platform_important>
+COMMON QASE PATTERNS:
+- "Request tracking authorization" (no prefix) → `step.app.marketing_tracker.request_tracking_authorization()` no check
+- "iOS: Tap Allow" → `if PLATFORM_TO_RUN == Platform.IOS: step.device.authorize_att_tracking(allow=True)`
+- "Set user" (no prefix) → `step.app.appsflyer.set_user()` no check
+- "Background app" (no prefix) → `step.device.background_app_for_duration()` no check
+- "Android: Enable X" → `if PLATFORM_TO_RUN == Platform.ANDROID: step.device.android_action()`
+
+Platform-specific UI interactions:
+- Command triggering UI → `step.app.*` (no check)
+- Interaction with UI → `step.device.*` (with check if QASE specifies)
+
+VALIDATION WORKFLOW:
+1. Implement test based on QASE
+2. Grep each `step.device.*` to find decorators
+3. Verify decorator compatibility
+4. If incompatible → Explain in chat, add TODO
+
+Reference similar tests in same directory for patterns.
+</platform_important>
+
+<tagging_critical>
+- Use only existing tags from Tag enum in `framework/test_management/enums/common/tags.py`
+- APPSFLYER_CHECK platform tags MUST match ALL APPSFLYER_INIT platforms:
+  -- iOS (INIT) → IOS_ON_LINUX (CHECK)
+  -- Android (INIT) → ANDROID_ON_LINUX (CHECK)
+  -- MAC (INIT) → MAC (CHECK)
+  -- UWP (INIT) → UWP (CHECK)
+  -- Windows (INIT) → WINDOWS (CHECK)
+- Database checks supported for ALL platforms - include every platform from INIT
+</tagging_critical>
+
+<tagging_important>
+- Add platform tags matching test's supported platforms
+- Add SDK-specific tags (APPSFLYER_INIT/APPSFLYER_CHECK or SENTRY)
+- Add test type tags if present in QASE (SMOKE, REGRESSION, etc.)
+</tagging_important>
+
+<appsflyer_critical>
+- Tag basic part: APPSFLYER_INIT, database check: APPSFLYER_CHECK
+- DATABASE CHECK DECISION (analyze BEFORE writing):
+  1. Custom events (example_event, event_purchase, etc.) → ACTIVE CHECK
+  2. track_session() or init methods → Search similar tests in same directory:
+     - Similar tests HAVE CHECK → ACTIVE CHECK
+     - Similar tests DON'T HAVE CHECK → COMMENTED CHECK
+  3. Pure config/settings test → NO CHECK
+  4. QASE says no verification → NO CHECK
+- COMMENTED CHECK (when uncertain):
+  -- Write entire function as commented Python (# prefix every line)
+  -- Add comment: which tests checked, why uncertain, what it would verify
+  -- Omit validation of commented code
+  -- Implement as commented if similar tests lack active checks
+</appsflyer_critical>
+
+<appsflyer_important>
+- Split into two functions: APPSFLYER_INIT (execution) + APPSFLYER_CHECK (database verification)
+- Use `@parametrize_devices` for APPSFLYER_CHECK with device=None attribute
+- Verify all events from INIT exist in database with correct schema
+- example_event creates three events: EXAMPLE_EVENT_SCHEMA, EXAMPLE_EVENT_EXTENDED_SCHEMA, EXAMPLE_EVENT_STORE_SCHEMA
+</appsflyer_important>
+
+<sentry_important>
+- Use SENTRY tag for all Sentry tests
+</sentry_important>
+
+<purchase_important>
+AVAILABLE UI DIALOG CLASSES PER PLATFORM:
+
+- MAC: `MacPurchaseDialog(app_name)` — `click_buy()`, `click_cancel()`, `is_dialog_present`
+       `MacPurchaseSuccessDialog()` — `click_ok()`
+- UWP: `UWPPurchaseDialog1(app_name)` — `click_buy()`, `is_dialog_present`
+       `UWPPurchaseDialog2(app_name)`, `UWPPaymentMethodDialog(app_name)`
+- Windows / iOS / Android: no purchase dialog automation available
+
+UI DIALOG USAGE RULE:
+- All dialog interactions must be wrapped in `@step_decorator` methods added to `framework/test_management/test_steps/device/device_steps.py`
+- Apply appropriate platform decorator (`@mac_only_step`, `@uwp_only_step`, etc.) to the device step
+- Tests use only `step.device.<dialog_method>()` — never import or instantiate dialog classes directly
+
+STRUCTURE PATTERN:
+```python
+# device_steps.py — add new step wrapping the dialog
+@step_decorator
+@mac_only_step
+def purchase_dialog_click_buy(self) -> None:
+    MacPurchaseDialog(app_name=config.app_name).click_buy()
+
+# test file
+def common_part(step):
+    step.purchase.set_market_can_buy(can_buy=True)
+    step.purchase.buy_product_ui(product_id="product_1")
+
+@tag(Tag.MAC, Tag.SMOKE)
+def test_XXX_simple_purchase_mac(step):
+    step.device.purchase_dialog_click_buy()
+    common_part(step=step)
+    step.device.purchase_success_dialog_click_ok()
+
+@tag(Tag.UWP, Tag.SMOKE)
+def test_XXX_simple_purchase_uwp(step):
+    step.device.purchase_dialog_click_buy()
+    common_part(step=step)
+```
+</purchase_important>
+
+<purchase_critical>
+- Test directory: `tests/in_app_purchase/`, one file per test
+- Each file can define `def common_part(step):` (non-test function) containing common steps shared across platforms
+- Each platform gets its own `def test_XXX_<platform>(step):` tagged only for that platform
+- No `if PLATFORM_TO_RUN ==` guards anywhere — platform separation is done entirely via separate tagged functions
+- Platform-specific UI dialog interactions are called via `step.device.*` in the platform test function (dialog classes live in device steps, not in tests)
+- No PURCHASE SDK tag exists — use only platform tags (`Tag.IOS`, `Tag.ANDROID`, `Tag.MAC`, `Tag.UWP`, `Tag.WINDOWS`) and test type tags (`Tag.SMOKE`, `Tag.REGRESSION`, etc.)
+</purchase_critical>
+
+<steps_reference>
+COMMON STEPS (available for all tests):
+- `step.app.internet_reachability.*` from app_widget/internet_reachability
+- `step.app.shared.*` from app_widget/shared
+- `step.app.marketing_tracker.*` from app_widget/marketing_authorization
+- `step.device.*` from device
+
+SENTRY STEPS (Sentry tests only):
+- `step.app.crashes.*` from app_widget/crashes
+- `step.sentry.*` from sentry
+
+APPSFLYER STEPS (AppsFlyer tests only):
+- `step.app.appsflyer.*` from app_widget/appsflyer
+- `step.appsflyer.*` from appsflyer
+
+PURCHASE STEPS (Purchase tests only):
+- `step.purchase.*` from purchase
+
+TEST EXAMPLES:
+- Sentry: `tests/test_sentry`
+- AppsFlyer: `tests/tests_appsflyer`
+- Purchase: `tests/in_app_purchase`
+</steps_reference>
