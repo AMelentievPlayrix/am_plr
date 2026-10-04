@@ -132,8 +132,8 @@ you stop early or hit the run budget.** State in the final report that you did.
 
 ### 5. Run budget — 5 automatic runs per platform
 
-You get **at most 5 automatic runs per platform**. This supersedes the
-"3 attempts per platform" figure in `.cursor/rules/test.mdc`.
+You get **at most 5 automatic runs per platform** (the repo's `.cursor/rules/test.mdc` says 3;
+this skill's limit wins).
 
 Before each rerun, diagnose: name the exact symptom, name the failing step, list 1–3
 likely causes, pick the most likely, and make the smallest change that addresses it.

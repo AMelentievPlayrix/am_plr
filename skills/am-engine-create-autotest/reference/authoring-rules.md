@@ -1,6 +1,7 @@
 # Authoring rules for VSO engine autotests
 
-Ported from `.cursor/rules/test.mdc`. Priority order when rules conflict:
+Originally ported from vso-engine-autotests `.cursor/rules/test.mdc` and since corrected against the
+repo; where they disagree, this file and the code win. Priority order when rules conflict:
 **Critical → Important → Best practice.**
 
 All generated Python must additionally satisfy `.cursor/rules/code.mdc` and
@@ -69,6 +70,7 @@ error handling. `make code-style` applies ruff format + lint.
   - `@android_only_step` → Android only
   - `@bs_only_step` → BrowserStack platforms only (iOS, Android)
   - `@mac_only_step`, `@uwp_only_step` → that desktop platform only
+  - `@ios_macos_only_step` → iOS and macOS only
   - no platform decorator → cross-platform
   - decorator conflicts with the case's platform requirements → report it in chat and
     leave a `TODO` comment; do not silently drop the step.
@@ -178,7 +180,8 @@ Tag all Sentry tests with `SENTRY`.
 
 ## In-app purchase — critical
 
-- Directory `tests/in_app_purchase/`, one file per test.
+- Directory `tests/tests_in_app_purchase/`, one file per test (`tests/test_in_app_purchase/` is an
+  empty leftover — do not add files there).
 - A file may define a non-test `def common_part(step):` holding the steps shared across
   platforms.
 - Each platform gets its own `def test_XXX_<platform>(step):` tagged only for that platform.
@@ -188,8 +191,8 @@ Tag all Sentry tests with `SENTRY`.
   device steps, never in tests.
 - Tag with platform tags, the `PURCHASE` tag, and test-type tags.
 
-> Note: `.cursor/rules/test.mdc` states "No PURCHASE SDK tag exists". That is stale —
-> `Tag.PURCHASE = "purchase"` does exist in `tags.py`. Verify against the enum, not the rule.
+> `Tag.PURCHASE = "purchase"` exists in `tags.py` (the old `test.mdc` said it didn't).
+> Always verify tags against the enum.
 
 ## In-app purchase — important
 
