@@ -52,7 +52,7 @@ Write it to the plan file in exactly this format:
 2. **Issues and proposed solutions** — each problem with its resolution, risk level, and a short code snippet
    only where it clarifies the idea.
 3. **Files** — every file to add, delete or update, with a one-line description of the change.
-4. **Outcomes** — short bullets: what is true once the plan is executed.
+4. **Achievements** — short bullets: what is achieved once the plan is executed.
 5. **Action steps** — numbered, concrete steps in build order, including how to verify (tests, commands).
 
 Rules for the text:

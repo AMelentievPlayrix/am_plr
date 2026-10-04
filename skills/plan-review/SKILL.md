@@ -24,7 +24,7 @@ Read the code the plan touches; verify its claims rather than trusting them. Loo
 
 - **Correctness** — the proposed change wouldn't work: wrong API or signature, broken call chain, unhandled
   edge case, race, wrong data flow, an assumption the code contradicts.
-- **Completeness** — a stated outcome with no action step; missing call-site updates, migrations,
+- **Completeness** — a stated achievement with no action step; missing call-site updates, migrations,
   config or tests; a file that must change but isn't listed.
 - **Regressions** — a public symbol or behaviour changes and something relying on it isn't handled.
 - **Order and dependencies** — steps in an order that can't build or leaves the repo broken midway;
