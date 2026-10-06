@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "qase": {
-      "command": "/Users/playrix/projects/vso-engine-autotests/.venv/bin/python",
+      "command": "/Users/playrix/projects/am_plr/.venv/bin/python",
       "args": [
         "/Users/playrix/projects/vso-engine-autotests/ai/mcp_servers/qase/qase-mcp-server.py"
       ],
@@ -14,7 +14,7 @@
       "url": "https://mcp.asana.com/sse"
     },
     "teamcity": {
-      "command": "/Users/playrix/projects/perfect-project/cats2/.venv/bin/python",
+      "command": "/Users/playrix/projects/am_plr/.venv/bin/python",
       "args": [
         "/Users/playrix/projects/perfect-project/cats2/ai/mcp_servers/teamcity/teamcity-mcp-server.py"
       ],
@@ -23,13 +23,13 @@
       }
     },
     "victoriametrics": {
-      "command": "/Users/playrix/projects/perfect-project/cats2/.venv/bin/python",
+      "command": "/Users/playrix/projects/am_plr/.venv/bin/python",
       "args": [
         "/Users/playrix/projects/perfect-project/cats2/ai/mcp_servers/victoriametrics/victoriametrics-mcp-server.py"
       ]
     },
     "cats-mcp-server": {
-      "command": "/Users/playrix/projects/perfect-project/cats2/.venv/bin/python",
+      "command": "/Users/playrix/projects/am_plr/.venv/bin/python",
       "args": [
         "/Users/playrix/projects/perfect-project/cats2/ai/mcp_servers/cats/cats-mcp-server.py"
       ]

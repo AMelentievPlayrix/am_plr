@@ -162,6 +162,12 @@ Then run the rule's "still needed" and own-history checks, and push. This reposi
 - **Ссылки** — `Qase: VSO-<case_id>` and the Asana task.
 - **Риски и ограничения** — commented-out steps, unverified expectations, known flakiness.
 
+### Reviewer
+
+Request review from `shimkovich-a` on every ready (non-draft) PR:
+`gh pr create --reviewer shimkovich-a`, or `gh pr edit <n> --add-reviewer shimkovich-a` for an
+existing PR. Do not request review on a draft or `[WIP]` PR; request it when the PR is marked ready.
+
 ---
 
 ## Asana comment

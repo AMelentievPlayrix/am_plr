@@ -65,6 +65,7 @@ Edits to a skill apply in the next session, or right away with `/reload-plugins`
 ```
 .claude-plugin/                 plugin manifest + local marketplace (this repo is both)
 .mcp.json                       all MCP servers (team + mine), loaded when am_plr is the first workspace folder
+pyproject.toml, uv.lock         deps of the team MCP servers -> .venv (`uv sync`), used by every server in .mcp.json
 skills/<name>/SKILL.md          my skills -> /am-plr:<name> in every project
 agents/<name>.md                my subagents -> am-plr:<name>
 rules/*.md                      my rules, loaded in every session (`paths:` frontmatter to scope)
@@ -83,7 +84,8 @@ workspaces/*.code-workspace     VS Code multi-folder workspaces
 - **am_plr is self-contained:** its skills rely only on rules inside am_plr. Rules they need from a team repo are
   copied into `rules/` (e.g. `code.md`, `python.md` from vso-engine-autotests); refresh the copy when the original changes.
 - **Skills**: plugin skills are namespaced (`am-plr:commit`), so they can't hide a team skill.
-- **MCP**: one file, `am_plr/.mcp.json`. Team servers run from their repos' code and venvs and keep the names
+- **MCP**: one file, `am_plr/.mcp.json`. Team servers run their repos' code with am_plr's own `.venv`
+  (deps in `pyproject.toml`), so a team repo changing its venv can't break them. They keep the names
   their skills call (`qase`, `cats-mcp-server`, …). It loads only when am_plr is the first workspace folder.
 - **Settings**: common settings live in am_plr; project-specific ones (interpreter, pytest args, launch.json)
   stay in each project's `.vscode/`. Generated files add am_plr keys on top of yours and drop nothing.
@@ -96,7 +98,7 @@ workspaces/*.code-workspace     VS Code multi-folder workspaces
 | add / rename / delete a skill | change `skills/<name>/` | `/reload-plugins` |
 | change editor / Claude settings | edit `config/` | re-run setup, copy the printed command |
 | add my own MCP server | code in `mcp/<name>/` (deps inline, `uv run --script`) + `[mcp.<name>]` in `upstreams.toml` | re-run setup, copy it from `artifacts/generated/mcp.json` into `.mcp.json` |
-| use another project's MCP server | add it to `am_plr/.mcp.json` | restart Claude Code |
+| use another project's MCP server | add it to `am_plr/.mcp.json` with `am_plr/.venv/bin/python`, its deps to `pyproject.toml` | `uv sync`, restart Claude Code |
 | follow another team repo | add `[upstream.<name>]` to `upstreams.toml` | re-run setup |
 | add an alias / shell function | new or existing `shell/<NN>-name.zsh` (loaded in name order) | new terminal |
 | add a token for my MCP server | `.env` (+ the name in `.env.example`), use as `${VAR}` in `upstreams.toml` | new terminal, re-run setup |
