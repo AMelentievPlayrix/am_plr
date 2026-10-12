@@ -1,7 +1,7 @@
 # Team repos that am_plr is layered on, and my own (custom) MCP servers.
 #
 # Upstream skills/agents/rules stay in their repos and load as project scope. Our skills come
-# from the am-plr plugin (namespaced am-plr:<skill>), so the two never collide.
+# from the am plugin (namespaced am:<skill>), so the two never collide.
 
 [upstream.perfect-project]
 path = "~/projects/perfect-project"

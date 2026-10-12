@@ -3,7 +3,7 @@
 Check finished changes against the plan and the rules.
 
 ```
-/am-plr:code-review [commit range] [plan path]
+/am:code-review [commit range] [plan path]
 ```
 
 **What it does**

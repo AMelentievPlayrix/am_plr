@@ -32,6 +32,6 @@
     }
   },
   "enabledPlugins": {
-    "am-plr@am-plr": true
+    "am@am-plr": true
   }
 }

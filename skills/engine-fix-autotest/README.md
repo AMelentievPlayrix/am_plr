@@ -3,7 +3,7 @@
 Fix a broken vso-engine-autotests test, starting from its Asana task.
 
 ```
-/am-plr:engine-fix-autotest <Asana task link>
+/am:engine-fix-autotest <Asana task link>
 ```
 
 **What it does**

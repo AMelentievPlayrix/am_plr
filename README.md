@@ -3,7 +3,7 @@
 My personal Claude Code + VS Code + shell setup, applied to all projects at once.
 It sits **on top of** team repos (perfect-project, vso-engine-autotests) and never conflicts with them.
 
-- **Skills** ship as a Claude Code plugin, `am-plr`. Use them in any project as `/am-plr:<skill>`.
+- **Skills** ship as a Claude Code plugin, `am`. Use them in any project as `/am:<skill>`.
 - **MCP servers** (team and mine) are all in `am_plr/.mcp.json`. Open `workspaces/vso.code-workspace`:
   am_plr is its first folder, so Claude Code starts there and loads them.
 - **Rules, settings, shell** are prepared by `scripts/setup.sh`.
@@ -19,7 +19,7 @@ Needs [uv](https://docs.astral.sh/uv/) and `jq`.
 2. **Do the "Next steps" it prints at the end.** Only what's still missing is listed, in order:
    - create `.env` from `.env.example` and fill in the tokens (git-ignored), once you have own MCP servers that need them;
    - add `source ~/projects/am_plr/shell/init.zsh` to `~/.zshrc` (loads tokens, aliases, prompt);
-   - install the plugin: in Claude Code run `/plugin marketplace add ~/projects/am_plr`, then `/plugin install am-plr@am-plr`;
+   - install the plugin: in Claude Code run `/plugin marketplace add ~/projects/am_plr`, then `/plugin install am@am-plr`;
    - keep am_plr the first folder in `workspaces/*.code-workspace`, so `am_plr/.mcp.json` loads;
    - review the Claude Code / VS Code settings with the printed `diff`, then run the printed `cp`. On a new machine
      (no `~/.claude/settings.json`) the blueprint is copied as is: put your token in place of
@@ -45,19 +45,20 @@ and any project file. You run those steps yourself from the printed list.
 Open Claude Code in any project. The plugin is enabled for all of them:
 
 ```
-/am-plr:commit                  split changes into logical commits
-/am-plr:describe-work           Asana task + GitHub PR for the changes
-/am-plr:engine-create-autotest  new vso-engine-autotests test from a Qase case
-/am-plr:engine-fix-autotest     repair a broken autotest from an Asana task
-/am-plr:engine-iap-port         port an iOS in-app purchase test to macOS / UWP
-/am-plr:prompt-writer           turn a rough idea into a good prompt
-/am-plr:plan                    write a plan for a change (plan mode, code/python rules)
-/am-plr:plan-review             review a plan: major issues only, as questions with proposed fixes
-/am-plr:code-review             review finished changes against the plan and rules: verdict + findings
+/am:commit                  split changes into logical commits
+/am:describe-work           Asana task + GitHub PR for the changes
+/am:engine-create-autotest  new vso-engine-autotests test from a Qase case
+/am:engine-create-autotests-in-batch  all Qase cases under an Asana parent task: analyse, plan, implement
+/am:engine-fix-autotest     repair a broken autotest from an Asana task
+/am:engine-iap-port         port an iOS in-app purchase test to macOS / UWP
+/am:prompt-writer           turn a rough idea into a good prompt
+/am:plan                    write a plan for a change (plan mode, code/python rules)
+/am:plan-review             review a plan: major issues only, as questions with proposed fixes
+/am:code-review             review finished changes against the plan and rules: verdict + findings
 ```
 
 Claude also picks them up automatically from their descriptions. Team skills keep their own names
-(e.g. `/perf-report`); ours always carry the `am-plr:` prefix, so the two never clash.
+(e.g. `/perf-report`); ours always carry the `am:` prefix, so the two never clash.
 Edits to a skill apply in the next session, or right away with `/reload-plugins`.
 
 ## What lives where
@@ -66,8 +67,8 @@ Edits to a skill apply in the next session, or right away with `/reload-plugins`
 .claude-plugin/                 plugin manifest + local marketplace (this repo is both)
 .mcp.json                       all MCP servers (team + mine), loaded when am_plr is the first workspace folder
 pyproject.toml, uv.lock         deps of the team MCP servers -> .venv (`uv sync`), used by every server in .mcp.json
-skills/<name>/SKILL.md          my skills -> /am-plr:<name> in every project
-agents/<name>.md                my subagents -> am-plr:<name>
+skills/<name>/SKILL.md          my skills -> /am:<name> in every project
+agents/<name>.md                my subagents -> am:<name>
 rules/*.md                      my rules, loaded in every session (`paths:` frontmatter to scope)
 mcp/<name>/                     code of my own MCP servers (configured in upstreams.toml)
 upstreams.toml                  team repos I follow, my own MCP servers
@@ -83,7 +84,7 @@ workspaces/*.code-workspace     VS Code multi-folder workspaces
 - **Team skills/agents/rules stay in their repos** and load from there.
 - **am_plr is self-contained:** its skills rely only on rules inside am_plr. Rules they need from a team repo are
   copied into `rules/` (e.g. `code.md`, `python.md` from vso-engine-autotests); refresh the copy when the original changes.
-- **Skills**: plugin skills are namespaced (`am-plr:commit`), so they can't hide a team skill.
+- **Skills**: plugin skills are namespaced (`am:commit`), so they can't hide a team skill.
 - **MCP**: one file, `am_plr/.mcp.json`. Team servers run their repos' code with am_plr's own `.venv`
   (deps in `pyproject.toml`), so a team repo changing its venv can't break them. They keep the names
   their skills call (`qase`, `cats-mcp-server`, …). It loads only when am_plr is the first workspace folder.

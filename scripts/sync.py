@@ -1,10 +1,10 @@
-"""am_plr sync: checks the am-plr plugin, links rules, generates MCP config and settings previews.
+"""am_plr sync: checks the am plugin, links rules, generates MCP config and settings previews.
 
 Run via scripts/setup.sh (it creates the venv first). Stdlib only, Python 3.11+.
 
 Layering:
-  skills/agents  shipped as the Claude Code plugin "am-plr" (this repo): namespaced as
-                 am-plr:<skill>, so they never collide with upstream project skills.
+  skills/agents  shipped as the Claude Code plugin "am" (this repo): namespaced as
+                 am:<skill>, so they never collide with upstream project skills.
   rules          plugins can't ship rules -> linked as one dir ~/.claude/rules/am_plr.
   mcp            only MY OWN servers (upstreams.toml [mcp.*]) -> generated file to copy into user
                  config. All servers in use live in am_plr/.mcp.json.
@@ -32,7 +32,7 @@ if sys.stdout.isatty():
 else:
     B = G = Y = R = D = N = ""
 
-PLUGIN_ID = "am-plr@am-plr"
+PLUGIN_ID = "am@am-plr"
 warnings = []
 todo = []  # (title, [lines]) printed as numbered "Next steps" at the end
 
@@ -86,7 +86,7 @@ def load_config():
 
 
 def check_plugin():
-    """Skills/agents come from the am-plr plugin; setup only checks it is installed and enabled."""
+    """Skills/agents come from the am plugin; setup only checks it is installed and enabled."""
     try:
         settings = json.loads((CLAUDE_DIR / "settings.json").read_text())
     except (OSError, json.JSONDecodeError):
@@ -95,7 +95,7 @@ def check_plugin():
         info(f"plugin {PLUGIN_ID} enabled - skills load from {REPO}/skills")
         return
     print(f"  {Y}~{N} plugin {PLUGIN_ID} not installed yet")
-    todo.append(("Install the am-plr plugin (once per machine) - in Claude Code, run:", [
+    todo.append(("Install the am plugin (once per machine) - in Claude Code, run:", [
         f"/plugin marketplace add {REPO}",
         f"/plugin install {PLUGIN_ID}",
     ]))
@@ -376,7 +376,7 @@ def mcp_todo(servers, missing):
         info(f"skills use MCP servers not in {PROJECT_MCP.name}: {', '.join(missing)}")
     lines = [f"Add new servers to {PROJECT_MCP}; my own ones are generated in {MCP_JSON}."]
     if missing:
-        lines.append(f"Your am-plr skills still need: {', '.join(missing)}")
+        lines.append(f"Your am skills still need: {', '.join(missing)}")
     todo.append(("Optional: extend MCP servers", lines))
 
 
@@ -389,7 +389,7 @@ def main():
     remove_old_links()
     check_plugin()
     skill_dirs = [d for d in sorted((REPO / "skills").glob("*")) if (d / "SKILL.md").is_file()]
-    info(f"{len(skill_dirs)} skill(s): {', '.join('am-plr:' + d.name for d in skill_dirs)}")
+    info(f"{len(skill_dirs)} skill(s): {', '.join('am:' + d.name for d in skill_dirs)}")
 
     step(f"Rules -> {CLAUDE_DIR / 'rules' / 'am_plr'}")
     sync_rules()
@@ -407,7 +407,7 @@ def main():
     step("Done" + (f" with {len(warnings)} warning(s)" if warnings else ""))
     for w in warnings:
         print(f"  {Y}!{N} {w}")
-    order = ("Create .env", "Fill in", "Load tokens", "Install the am-plr", "Make am_plr", "Add my MCP", "Review", "Optional")
+    order = ("Create .env", "Fill in", "Load tokens", "Install the am", "Make am_plr", "Add my MCP", "Review", "Optional")
     todo.sort(key=lambda t: next((i for i, p in enumerate(order) if t[0].startswith(p)), len(order)))
     if todo:
         print(f"\n{B}Next steps{N} - setup changed nothing outside ~/.claude/rules; run these yourself:")

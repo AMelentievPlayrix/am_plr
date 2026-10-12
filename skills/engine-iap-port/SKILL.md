@@ -24,5 +24,5 @@ Shared rules that apply on top of the reference file:
   § In-app purchase.
 - The validation run limit in the reference files is 3 attempts; that is intentional for this
   narrow, plan-driven change and overrides the 5-run budget of the other engine skills.
-- Commits go through the `am-plr:commit` skill; PR and Asana conventions come from
+- Commits go through the `am:commit` skill; PR and Asana conventions come from
   [writing-git-github-asana.md](../../rules/writing-git-github-asana.md).

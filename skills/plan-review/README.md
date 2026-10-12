@@ -3,7 +3,7 @@
 Find the major problems in a plan and decide on fixes with you.
 
 ```
-/am-plr:plan-review [path to plan]
+/am:plan-review [path to plan]
 ```
 
 **What it does**

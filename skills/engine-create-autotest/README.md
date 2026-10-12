@@ -3,7 +3,7 @@
 Automate a Qase test case as a new vso-engine-autotests test, end to end.
 
 ```
-/am-plr:engine-create-autotest   (give the Qase case id and the Asana task link)
+/am:engine-create-autotest   (give the Qase case id and the Asana task link)
 ```
 
 **What it does**

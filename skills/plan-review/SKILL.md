@@ -1,6 +1,6 @@
 ---
 name: plan-review
-description: Review an implementation plan (the current plan, or a plan file at a given path) for major problems — bugs, wrong assumptions, missing steps, risks, rule violations — and walk the user through every one as a question with proposed solutions. Skips minor nitpicks. Use for "review this plan", "check the plan", or /am-plr:plan-review [path].
+description: Review an implementation plan (the current plan, or a plan file at a given path) for major problems — bugs, wrong assumptions, missing steps, risks, rule violations — and walk the user through every one as a question with proposed solutions. Skips minor nitpicks. Use for "review this plan", "check the plan", or /am:plan-review [path].
 argument-hint: "[optional: path to a plan file]"
 allowed-tools: Read Grep Glob Bash(git status *) Bash(git diff *) Bash(git log *)
 ---

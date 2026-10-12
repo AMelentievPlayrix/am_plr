@@ -9,7 +9,7 @@ allowed-tools: Bash(git status *) Bash(git diff *) Bash(git log *) Bash(git add 
 
 Turn the current working-tree changes into a small series of commits, each one a coherent, independent logical unit, instead of a single commit with everything mixed together. The goal is reviewability: someone reading `git log -p` should be able to understand each change in isolation.
 
-This skill owns the commit policy. Other skills call it (Skill tool, `skill: "am-plr:commit"`) with the paths to commit and, if they have one, a project-specific split order. Commit message language comes from the rule [writing-git-github-asana.md](../../rules/writing-git-github-asana.md) (Russian).
+This skill owns the commit policy. Other skills call it (Skill tool, `skill: "am:commit"`) with the paths to commit and, if they have one, a project-specific split order. Commit message language comes from the rule [writing-git-github-asana.md](../../rules/writing-git-github-asana.md) (Russian).
 
 ## Procedure
 

@@ -3,7 +3,7 @@
 Port an iOS in-app purchase test to macOS or UWP, in two phases.
 
 ```
-/am-plr:engine-iap-port <plan|implement> <macos|uwp> <test id>
+/am:engine-iap-port <plan|implement> <macos|uwp> <test id>
 ```
 
 **What it does**

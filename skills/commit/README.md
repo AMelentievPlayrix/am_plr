@@ -3,7 +3,7 @@
 Split your uncommitted changes into small, logical commits with Russian messages.
 
 ```
-/am-plr:commit [paths or scope]
+/am:commit [paths or scope]
 ```
 
 **What it does**

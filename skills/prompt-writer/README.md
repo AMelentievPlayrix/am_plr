@@ -3,7 +3,7 @@
 Turn a rough idea into a clear, ready-to-paste prompt.
 
 ```
-/am-plr:prompt-writer <rough description>
+/am:prompt-writer <rough description>
 ```
 
 **What it does**

@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Write a reviewable implementation plan for requested code changes, in plan mode only, following the am_plr code and Python rules. Use when asked to "plan this", "make a plan for …", or /am-plr:plan <what to change>.
+description: Write a reviewable implementation plan for requested code changes, in plan mode only, following the am_plr code and Python rules. Use when asked to "plan this", "make a plan for …", or /am:plan <what to change>.
 argument-hint: "<what should be built or changed>"
 allowed-tools: Read Grep Glob Bash(git status *) Bash(git diff *) Bash(git log *)
 ---
@@ -68,4 +68,4 @@ Rules for the text:
   recommended answer.
 
 Then call `ExitPlanMode` so the user can review and approve it. For an independent check before approving,
-the user can run `/am-plr:plan-review`.
+the user can run `/am:plan-review`.

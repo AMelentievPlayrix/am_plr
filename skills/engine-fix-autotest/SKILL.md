@@ -23,7 +23,7 @@ Authoring rules for any code you touch live in
 
 ## Do not use this when
 
-- A brand-new test must be written from a Qase case → use `/am-plr:engine-create-autotest`.
+- A brand-new test must be written from a Qase case → use `/am:engine-create-autotest`.
 - The failure is an app defect and no test change is warranted — diagnose, then report it
   as a defect instead of weakening the test.
 
@@ -115,7 +115,7 @@ Verify the fix was actually exercised. If the original failure only reproduces u
 conditions, say so plainly: a green local run then proves absence of regression, not the fix.
 
 Record the validation results where the project records them, and commit that separately
-via `am-plr:commit`.
+via `am:commit`.
 
 ### 8. Open the pull request
 
@@ -149,5 +149,5 @@ State plainly whether `.env` was restored and whether the working tree is clean.
 - Do not stabilise a failure you have not explained.
 - Do not weaken or delete an assertion to get green.
 - Do not disable, skip or xfail a test as the fix unless the user explicitly asks.
-- Everything in the `am-plr:commit` skill's Constraints (no `.env`/secrets, no rewriting history) and the
+- Everything in the `am:commit` skill's Constraints (no `.env`/secrets, no rewriting history) and the
   writing rule's Asana section (comment only; never close or reassign the task).

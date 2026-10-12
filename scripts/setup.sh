@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-shot setup for am_plr. Safe to re-run any time; every step is idempotent.
 #
-#   - checks the am-plr plugin (skills) is installed - installing it is your step
+#   - checks the am plugin (skills) is installed - installing it is your step
 #   - rules         -> ~/.claude/rules/am_plr (one symlink)
 #   - settings previews + my MCP config -> artifacts/generated/; checks am_plr/.mcp.json and workspaces
 #
