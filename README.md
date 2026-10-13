@@ -55,6 +55,7 @@ Open Claude Code in any project. The plugin is enabled for all of them:
 /am:plan                    write a plan for a change (plan mode, code/python rules)
 /am:plan-review             review a plan: major issues only, as questions with proposed fixes
 /am:code-review             review finished changes against the plan and rules: verdict + findings
+/am:log                     log this chat's work to work-log/ (commit + push); /am:log info this week for a report
 ```
 
 Claude also picks them up automatically from their descriptions. Team skills keep their own names
@@ -69,6 +70,7 @@ Edits to a skill apply in the next session, or right away with `/reload-plugins`
 pyproject.toml, uv.lock         deps of the team MCP servers -> .venv (`uv sync`), used by every server in .mcp.json
 skills/<name>/SKILL.md          my skills -> /am:<name> in every project
 agents/<name>.md                my subagents -> am:<name>
+work-log/YYYY-MM.md             my work log, written and pushed by /am:log
 rules/*.md                      my rules, loaded in every session (`paths:` frontmatter to scope)
 mcp/<name>/                     code of my own MCP servers (configured in upstreams.toml)
 upstreams.toml                  team repos I follow, my own MCP servers

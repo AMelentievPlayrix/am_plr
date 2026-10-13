@@ -13,7 +13,9 @@ Automate all the Qase cases under one Asana parent task, as a batch, in vso-engi
   first, a stacked merge order, proposed Asana actions and open questions.
 - Waits for you to approve the plan.
 - Execution: one item at a time, through `engine-create-autotest`. Each item gets its own branch and PR, and
-  halted items become `[WIP]` draft PRs. At the end it posts Asana comments and requests reviewers on green PRs.
+  halted items become `[WIP]` draft PRs. Each shared framework item also gets its own Asana blocker task, linked
+  to the cases it unblocks and commented with the PR once green. A watchdog restarts subagents that hang. At the
+  end it posts Asana comments and requests reviewers on green PRs.
 - After you merge: rebases the stacked PRs and re-validates them.
 
 The memory file is required, and you choose where it lives. Put it somewhere git ignores, e.g.

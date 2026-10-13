@@ -1,6 +1,6 @@
 {
   "name": "am",
   "displayName": "am",
-  "description": "Personal skills (commit, describe-work, engine autotests, prompt-writer) layered on top of team repos",
+  "description": "Personal skills (commit, describe-work, engine autotests, prompt-writer, work log) layered on top of team repos",
   "author": { "name": "Anton Melentiev" }
 }

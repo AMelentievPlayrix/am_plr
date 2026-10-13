@@ -69,7 +69,7 @@ which belongs to that item's subagent.
 ### Blockers
 
 The Asana dependencies of the subtasks. Link the blocker task itself. Quote a comment only when it changes
-the meaning.
+the meaning. Blocker tasks the batch creates for its framework items go here too, marked `(created by batch, F<n>)`.
 
 | Blocker | Description | Blocks (this batch) |
 |---|---|---|

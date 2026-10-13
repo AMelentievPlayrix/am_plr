@@ -25,6 +25,8 @@ PR template, commit policy). Refer to them by path. Subagents cannot load that s
 | Phase 2 loop, per-item brief with overrides, stacking, Asana, after merges | [reference/execution.md](reference/execution.md) |
 
 Language: chat in English; commits, PRs and Asana in Russian ([writing rule](../../rules/writing-git-github-asana.md)).
+Batch item ids (`F1`, `T2`) and stage names are internal: never put them in commits, PRs or Asana. Name the test,
+case and PR instead ([execution.md](reference/execution.md) § Text for people outside the batch).
 
 ## Use this when
 
@@ -88,6 +90,10 @@ Write the plan into the memory file (§ Plan, including the "Merge order" table)
    autotests, and new dependency tasks for product changes the analysis found. Every blocker task this batch
    will fix through a framework item gets assigned to the batch author when phase 2 starts
    ([execution.md](reference/execution.md) § Before the first item). List those blockers in the plan.
+   Every framework item that no existing blocker task covers gets a **new blocker task**: a subtask of the
+   dependencies container, assigned to the batch author, "what needs to be done to unblock what", set as a
+   dependency of the subtasks it blocks ([execution.md](reference/execution.md) § Blocker tasks for framework
+   items). List the proposed tasks in the plan.
 7. **Open questions** for the user: inconsistent Qase expectations, region or CI needs, product owners.
 8. **An explicit request for approval.** Nothing in phase 2 starts without it. Record the approval, and any
    changes the user makes, in "Batch events".
@@ -98,8 +104,14 @@ Follow [execution.md](reference/execution.md). In short:
 
 - Run one subagent per item, in merge order, each with the per-item brief. Never run two at once: they share one
   working tree, one `.env` and one BrowserStack account.
+- Before a framework item starts, create its blocker task if it has none; its PR links that task. When the PR goes
+  green, comment on the task with the PR link and what was in fact done
+  ([execution.md](reference/execution.md) § Blocker tasks for framework items). This applies to framework PRs added
+  during execution too.
 - After each item, verify its report (tree clean on master, `.env` restored, PR state), update the task and
   merge-order tables, then start the next item. Skip any item whose dependency halted, and mark it blocked.
+- Watch for hangs, not only for finished subagents: the watchdog checks progress every 10 min
+  ([execution.md](reference/execution.md) § Before the first item).
 - At the end: post the per-subtask Asana comments from the texts the subagents prepared, and one summary comment
   on the parent task. Request a reviewer on green PRs only. Then give the user the final report.
 - After the user merges PRs: rebase the stacked PRs, re-validate them on a device, and record it all
