@@ -26,8 +26,8 @@ Needs [uv](https://docs.astral.sh/uv/). The team repos must be siblings of am_pl
    - review the Claude Code / VS Code settings with the printed diff command, then run the printed copy command.
      On a new machine (no `~/.claude/settings.json`) the blueprint is copied as is: put your token in place of
      `<YOUR_ANTHROPIC_AUTH_TOKEN>`;
-   - macOS only: add `source ~/projects/am_plr/shell/init.zsh` to `~/.zshrc` (aliases and prompt; there is no
-     PowerShell equivalent by design, and tokens no longer travel through the shell).
+   - load the aliases and prompt in every terminal: macOS adds `source .../shell/init.zsh` to `~/.zshrc`,
+     Windows adds `. ...\powershell\init.ps1` to `$PROFILE` (setup prints the exact command).
 3. **Restart** Claude Code (in VS Code: **Developer: Reload Window**). Check with `/plugin`, `/mcp` and `/skills`.
 4. Run setup again: when everything is in place it prints **All set**.
 
@@ -93,7 +93,8 @@ upstreams.toml                  team repos I follow (paths relative to am_plr's 
 scripts/setup.sh, sync.py       setup on macOS;  scripts/setup.ps1, sync_win.py  setup on Windows
 config/claude/settings.json     Claude Code blueprint: gateway env (token = placeholder), model, permissions, plugin
 config/vscode/settings.json     editor settings I want everywhere (autosave, 120 ruler, terminal, Python)
-shell/*.zsh                     aliases, functions, prompt; macOS only (no PowerShell equivalent by design)
+shell/*.zsh                     aliases, functions, prompt on macOS; loaded by shell/init.zsh from ~/.zshrc
+powershell/*.ps1                the same on Windows; loaded by powershell/init.ps1 from $PROFILE
 workspaces/*.code-workspace     vso (cross-platform) and vso-windows (adds vscode_project, engine-tests)
 ```
 
@@ -119,7 +120,7 @@ workspaces/*.code-workspace     vso (cross-platform) and vso-windows (adds vscod
 | change editor / Claude settings | edit `config/` | re-run setup, copy the printed command |
 | add an MCP server (mine or another project's) | `[mcp.<name>]` in `upstreams.toml` (use `${VENV_PYTHON}` and `${upstream.<repo>}`); its deps in `pyproject.toml`; my own servers' code in `mcp/<name>/` | re-run setup, reload the window |
 | follow another team repo | add `[upstream.<name>]` to `upstreams.toml` | re-run setup |
-| add an alias / shell function | new or existing `shell/<NN>-name.zsh` (loaded in name order) | new terminal |
+| add an alias / shell function | `shell/<NN>-name.zsh` (macOS) and/or `powershell/<NN>-name.ps1` (Windows), loaded in name order | new terminal |
 | add a token for an MCP server | `mcp/.env` (+ the name in `mcp/.env.example`), use as `${VAR}` in `upstreams.toml` (`${VAR?}` if optional) | re-run setup |
 | add a machine-only PATH | `~/.zshrc` / `~/.zprofile` (outside git) | new terminal |
 

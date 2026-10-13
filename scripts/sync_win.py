@@ -30,6 +30,9 @@ MCP_ENV = REPO / "mcp" / ".env"  # tokens, git-ignored (template: mcp/.env.examp
 MCP_ENV_EXAMPLE = REPO / "mcp" / ".env.example"
 LEGACY_ENV = REPO / ".env"  # pre-mcp/.env location, still read so a shared checkout keeps working
 WORKSPACES = REPO / "workspaces"
+POWERSHELL_DIR = REPO / "powershell"  # aliases + prompt; the macOS twin is shell/*.zsh
+# $PROFILE of Windows PowerShell 5.1; PowerShell 7+ uses "PowerShell" instead of "WindowsPowerShell".
+PROFILE = Path.home() / "Documents" / "WindowsPowerShell" / "Microsoft.PowerShell_profile.ps1"
 VENV_PYTHON = REPO / ".venv" / "Scripts" / "python.exe"
 UV = os.environ.get("AM_PLR_UV") or "uv"
 
@@ -312,6 +315,26 @@ def settings_todo(previews):
 
 # ----------------------------------------------------------------------------- venv
 
+def check_profile():
+    """$PROFILE is never edited; only report whether it loads powershell/init.ps1.
+
+    Nothing in Claude Code depends on it (setup writes the tokens into .mcp.json), so this is
+    purely about the aliases and the prompt - the Windows twin of check_shell() on macOS.
+    """
+    init = POWERSHELL_DIR / "init.ps1"
+    if not init.is_file():
+        return
+    text = PROFILE.read_text(encoding="utf-8", errors="ignore") if PROFILE.is_file() else ""
+    if re.search(r"^\s*\.\s+\S*powershell[\\/]init\.ps1", text, re.M | re.I):
+        info(f"{PROFILE} loads {init}")
+        return
+    print(f"  {Y}~{N} $PROFILE does not load the am_plr PowerShell config yet (aliases, prompt)")
+    todo.append(("Load the am_plr aliases and prompt in every terminal", [
+        f"New-Item -ItemType File -Force {q(PROFILE)} | Out-Null",
+        f"Add-Content {q(PROFILE)} '. {init}'   # then open a new terminal",
+    ]))
+
+
 def ensure_venv():
     """uv sync -> .venv. The generated .mcp.json runs every server on its python, so this comes first."""
     existed = VENV_PYTHON.exists()
@@ -524,6 +547,7 @@ def main():
 
     step(f"Settings (config\\) -> {GEN_DIR}")
     settings_todo(sync_settings(upstreams))
+    check_profile()
 
     step(f"Python env -> {REPO / '.venv'}")
     ensure_venv()  # before the MCP step: .mcp.json points every server at this venv's python
