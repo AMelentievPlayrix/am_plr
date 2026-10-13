@@ -5,6 +5,10 @@
 
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)  # the up/down arrows are non-ASCII
 
+# This prompt already shows the venv from $env:VIRTUAL_ENV. Without this, Activate.ps1 wraps the
+# prompt to print its own "(.venv) " in front of ours and you get it twice.
+$env:VIRTUAL_ENV_DISABLE_PROMPT = '1'
+
 $script:AmPlrColors = @{
     Reset = "$([char]27)[0m"; Yellow = "$([char]27)[33m"; Cyan = "$([char]27)[36m"
     Green = "$([char]27)[32m"; Red = "$([char]27)[31m"; White = "$([char]27)[37m"
