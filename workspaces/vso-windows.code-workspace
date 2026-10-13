@@ -1,0 +1,25 @@
+{
+	"folders": [
+		{
+			"name": "am_plr",
+			"path": ".."
+		},
+		{
+			"name": "vscode_project",
+			"path": "../../vscode_project"
+		},
+		{
+			"name": "engine-tests",
+			"path": "../../engine-tests"
+		},
+		{
+			"name": "perfect-project",
+			"path": "../../perfect-project"
+		},
+		{
+			"name": "vso-engine-autotests",
+			"path": "../../vso-engine-autotests"
+		}
+	],
+	"settings": {}
+}
