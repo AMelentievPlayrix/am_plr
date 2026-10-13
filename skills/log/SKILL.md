@@ -7,9 +7,9 @@ allowed-tools: Bash(git -C /Users/playrix/projects/am_plr *) Bash(date *)
 
 # Work log
 
-Keep a short log of my work so I can say at the bi-weekly meeting "from X to Y I automated N autotests,
-found and fixed Z blockers for <area>, fixed M existing blockers, investigated K perf reports", and explain
-what made some items slow.
+Keep a short log of my work so I can say at the bi-weekly meeting "from X to Y I automated N autotests
+(M counting platforms), found and fixed Z blockers for <area>, fixed M existing blockers, investigated K
+perf reports", and explain what made some items slow.
 
 - **Log folder:** `/Users/playrix/projects/am_plr/work-log/`. Always use this absolute path and
   `git -C /Users/playrix/projects/am_plr`, because the skill runs from any repo (am_plr,
@@ -31,14 +31,21 @@ ascending order, and one bullet per item under it:
 # 2026-10
 
 ## 2026-10-13
-- autotest-new ×3: покупки в магазине на macOS — Qase VSO-512, VSO-513, VSO-514; PR #231
+- autotest-new ×3 [iOS, Android, macOS]: покупки в магазине — Qase VSO-512, VSO-513, VSO-514; PR #231
+- autotest-fix [Windows]: VSO-601 стабилизирован выбор ключа — PR #232
 - blocker-found/ACE: после undo не открывается key popup — https://app.asana.com/0/0/1213...
   - hard: падало только на Windows, воспроизвёл после 4 прогонов; причина в порядке событий фокуса
 - perf: разбор алерта FPS на сцене Match3Level (iOS) — шум, не деградация
 ```
 
-Line format: `- <category>[/<area>] [×N]: <кратко, что сделано> — <refs>`
+Line format: `- <category>[/<area>] [×N] [<platforms>]: <кратко, что сделано> — <refs>`
 - `×N` only when one line covers several items of the same kind; no `×` means 1.
+- `[<platforms>]`: required for `autotest-new` and `autotest-fix`, not used elsewhere. The platforms each
+  test on the line was written or repaired for, comma-separated, using the `Platform` values of
+  vso-engine-autotests: `iOS`, `Android`, `macOS`, `Windows`, `UWP`, `Emscripten`, `Facebook`,
+  `android_on_linux`, `ios_on_linux`. Every test on one line must cover the same platforms; if they
+  differ, split into lines. Platform-weighted count of a line = N × number of platforms. Old lines without
+  the list count as 1 platform.
 - `<area>` is required for blocker categories (ACE, ASG, PSI, Inspector, IAP, …), optional otherwise.
 - `<refs>`: Asana link, PR number or URL, Qase case IDs, TeamCity build, whichever the chat has. Omit
   ` — <refs>` if there are none.
@@ -67,6 +74,14 @@ A blocker found and fixed in the same chat gets two lines: `blocker-found` and `
    blockers found or fixed, perf reports investigated, other notable work. Take IDs and links only from
    the chat. Count only finished work; work that is still going on goes in as `other` with
    "в процессе", or is left out if trivial.
+   **Platforms of an autotest** (each platform is usually separate work: its own run, fixes and
+   validation, so the platform-weighted count shows the real volume). Determine them in this order:
+   - the platforms the chat shows the test was implemented and validated on;
+   - otherwise read the test file in vso-engine-autotests: the platform tags in `@tag(...)`
+     (`Tag.IOS`, `Tag.ANDROID`, `Tag.MAC`, …) minus platforms excluded by `skipif`/`skip`
+     (e.g. `config.platform_to_run in Platform.desktop_platforms()` removes all desktop ones);
+   - if the test has `Tag.ALL_PLATFORMS` and the chat doesn't say where it was validated, ask the user
+     instead of counting every platform.
 3. **Hard parts.** Add a `hard:` note only when the chat shows real difficulty: long debugging, a wrong
    first approach, flaky reproduction, a blocker in another team's code, missing access or data. Say what
    was hard in 1–2 sentences. Never invent a reason.
@@ -102,22 +117,26 @@ A blocker found and fixed in the same chat gets two lines: `blocker-found` and `
      future).
    - If the range can't be parsed, ask instead of guessing.
 2. **Read** every `work-log/YYYY-MM.md` the range touches and keep the day sections inside it.
-3. **Count** per category, summing `×N` (no `×` = 1), and split blocker counts by area.
+3. **Count** per category, summing `×N` (no `×` = 1), and split blocker counts by area. For
+   `autotest-new` and `autotest-fix` also sum the platform-weighted count (N × platforms per line, 1 for
+   lines without a list) and per-platform totals.
 4. **Print** in Russian, under about 15 lines, ready to read out at the meeting:
 
    ```
    Период: 2026-10-06 — 2026-10-12
-   Автотесты: новых 7, починено 3
+   Автотесты: новых 7, с учётом платформ 15; починено 3, с учётом платформ 5
+     по платформам: iOS 6, Android 5, macOS 7, Windows 2
    Блокеры найдены: 2 (ACE 1, IAP 1); исправлены: 3 (ACE 2, PSI 1)
    Perf-отчётов разобрано: 4
    Заметное:
-   - покупки в магазине на macOS, 3 теста — PR #231
+   - покупки в магазине, 3 теста × 3 платформы — PR #231
    - ...
    Сложности:
    - key popup в ACE: падало только на Windows, долго воспроизводил
    ```
 
-   Leave out categories with zero count. Pick 3–5 notable items (biggest counts, blockers, items with
+   Leave out categories with zero count. Print "с учётом платформ" only when it differs from the plain
+   count; omit the per-platform line when there are no autotest lines. Pick 3–5 notable items (biggest counts, blockers, items with
    refs). List every `hard:` note in the range, shortened to one line each.
 5. Report only what is in the log. If the range has no entries, say so. Report mode never writes or
    commits.
