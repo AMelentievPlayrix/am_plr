@@ -46,6 +46,8 @@ Line format: `- <category>[/<area>] [×N] [<platforms>]: <кратко, что �
   `android_on_linux`, `ios_on_linux`. Every test on one line must cover the same platforms; if they
   differ, split into lines. Platform-weighted count of a line = N × number of platforms. Old lines without
   the list count as 1 platform.
+- If one test's platforms were done on separate days, it gets separate lines; put its test ID (`VSO-<n>`)
+  on each so the report can count it once.
 - `<area>` is required for blocker categories (ACE, ASG, PSI, Inspector, IAP, …), optional otherwise.
 - `<refs>`: Asana link, PR number or URL, Qase case IDs, TeamCity build, whichever the chat has. Omit
   ` — <refs>` if there are none.
@@ -119,7 +121,8 @@ A blocker found and fixed in the same chat gets two lines: `blocker-found` and `
 2. **Read** every `work-log/YYYY-MM.md` the range touches and keep the day sections inside it.
 3. **Count** per category, summing `×N` (no `×` = 1), and split blocker counts by area. For
    `autotest-new` and `autotest-fix` also sum the platform-weighted count (N × platforms per line, 1 for
-   lines without a list) and per-platform totals.
+   lines without a list) and per-platform totals. A test ID (`VSO-<n>`) on several lines of the same
+   category counts as one test, and each of its platforms once.
 4. **Print** in Russian, under about 15 lines, ready to read out at the meeting:
 
    ```
