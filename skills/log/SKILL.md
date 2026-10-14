@@ -2,7 +2,7 @@
 name: log
 description: Keep a short dated log of my work in am_plr/work-log and report on it for bi-weekly meetings. Write mode (`/am:log`, "update am_log", "log this to am_log") adds what was done in the current chat to the log, then commits and pushes it. Report mode (`/am:log info this week`, `info last week`, `info from <date> to <date>`) prints counts and notable items for that period.
 argument-hint: "[info this week | info last week | info from <date> to <date>]"
-allowed-tools: Bash(git -C /Users/playrix/projects/am_plr *) Bash(date *)
+allowed-tools: Bash(git -C *am_plr *) Bash(date *)
 ---
 
 # Work log
@@ -11,9 +11,9 @@ Keep a short log of my work so I can say at the bi-weekly meeting "from X to Y I
 (M counting platforms), found and fixed Z blockers for <area>, fixed M existing blockers, investigated K
 perf reports", and explain what made some items slow.
 
-- **Log folder:** `/Users/playrix/projects/am_plr/work-log/`. Always use this absolute path and
-  `git -C /Users/playrix/projects/am_plr`, because the skill runs from any repo (am_plr,
-  vso-engine-autotests, perfect-project).
+- **Paths:** the skill runs from any repo (am_plr, vso-engine-autotests, perfect-project), so always use
+  absolute paths. `<repo>` is the am_plr root: the grandparent of this skill's base directory (shown above
+  as "Base directory for this skill"). Log folder: `<repo>/work-log/`; git: `git -C <repo>`.
 - **Language:** log entries and reports in Russian; identifiers, links, names, file paths and the
   category slugs stay as they are. Commit messages for the log in English (this overrides the commit
   language in `rules/writing-git-github-asana.md` for this skill only).
@@ -93,15 +93,15 @@ A blocker found and fixed in the same chat gets two lines: `blocker-found` and `
 6. **Write.** Create `work-log/YYYY-MM.md` with the `# YYYY-MM` title if it is missing; create the
    `## YYYY-MM-DD` heading in date order if it is missing; append or update the lines.
 7. **Show** the added or changed lines to the user.
-8. **Commit and push** (only if `git -C /Users/playrix/projects/am_plr status --porcelain -- work-log/`
+8. **Commit and push** (only if `git -C <repo> status --porcelain -- work-log/`
    shows changes):
    - Invoke the `am:commit` skill (Skill tool, `skill: "am:commit"`) with these arguments:
-     `repo /Users/playrix/projects/am_plr (use git -C); commit only work-log/; leave every other change
+     `repo <repo> (use git -C); commit only work-log/; leave every other change
      unstaged; one commit, no confirmation needed; English message: "Update work log for YYYY-MM-DD"`.
      If several days changed, name the range: `Update work log for YYYY-MM-DD..YYYY-MM-DD`.
-   - Push: `git -C /Users/playrix/projects/am_plr push`.
+   - Push: `git -C <repo> push`.
    - If the push is rejected because the remote is ahead, run
-     `git -C /Users/playrix/projects/am_plr pull --rebase --autostash` once (autostash because the repo
+     `git -C <repo> pull --rebase --autostash` once (autostash because the repo
      often has unrelated uncommitted edits) and push again.
    - On any other failure, or if the retry fails, stop and report the error and the state (committed but
      not pushed, conflict, …). Never force-push, never resolve conflicts on your own.
