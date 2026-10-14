@@ -52,7 +52,8 @@ For each row of "Merge order", top to bottom:
    - its memory-file section has the runs, the PR and a prepared Asana comment.
    Record a `(orchestrator): Verified — ...` line in its section. Fix any mismatch before the next item, or stop
    and report.
-5. **Update** the task table row and the merge-order row (branch, PR, status, runs and device), then continue.
+5. **Update** the Task table row, the Blockers rows it touches and the merge-order row (branch, PR, status, runs
+   and device) — [memory-file.md](memory-file.md) § Keeping the status view current — then continue.
 
 **No partial implementations.** A test counts as green only when every expected result of the case has an
 automated check (an agreed substitute counts; a commented-out expectation does not). If an item can't be fully
@@ -107,7 +108,7 @@ Dependencies container (parent of all blocker tasks):
      No batch item ids or stage names (§ Text for people outside the batch).
 2. **Link it** as a dependency of every subtask it blocks (`set_task_dependencies` on each subtask, or
    `set_task_dependents` on the new task). Read the links back in both directions.
-3. **Record** the task gid in the memory file's Blockers table (Blocks = the cases) and in the item's Merge order
+3. **Record** the task in the memory file's Blockers table (a new id, Cases = the blocked cases, Asana link) and in the item's Merge order
    row, and as a batch event.
 4. **Brief**: the item's brief carries the task link, so the PR's "Ссылки" names it as the Asana task. The cases'
    PRs keep their own subtasks.
@@ -224,7 +225,8 @@ Return exactly these fields:
 
 ## At the end of the batch
 
-1. Re-read the memory file. Every row must be final: `green PR`, `draft PR`, `blocked by ...` or `out of scope`.
+1. Re-read the memory file. Every Task table row must be final (🟢 / 🟡 / 🔴 / ⛔ / out of scope) and every blocker row
+   current ([memory-file.md](memory-file.md) § Keeping the status view current).
    Every framework item with a PR must have a blocker task linked to the subtasks it blocks; create any that is
    missing now (§ Blocker tasks for framework items).
 2. **Asana**, Russian, comment-only, `html_text` per the writing rule:

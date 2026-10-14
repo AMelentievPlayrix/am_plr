@@ -114,11 +114,12 @@ The orchestrator does this while the reports arrive, not after all of them are i
   check the product, then record the inconsistency as an open question for the user.
 - **Missing reports.** If a subagent fails or returns an incomplete report, relaunch it once, with the gap named.
 
-## Verdicts and bottom line
+## Verdicts and the status view
 
-When every case is in, write § Summary and put § Bottom line at the top of the file.
+When every case is in, bring both status tables ([memory-file.md](memory-file.md) § Task table, § Blockers) up
+to date: every case row has its verdict and blocker ids, every blocker (Asana or found) has a row.
 
-Define "fully" explicitly in the bottom line: **every expected result has an automated check.** Named substitutes
+Define "fully" explicitly, in the line above the Task table: **every expected result has an automated check.** Named substitutes
 count (e.g. a device-log line instead of a console view that has no API). Checks that are commented out do not.
 
 | Group | Meaning |
@@ -128,6 +129,8 @@ count (e.g. a device-log line instead of a console view that has no API). Checks
 | Not automatable without product change | Name the change and who would own it |
 | Manual by nature | Say why |
 
-Split by platform where the answer differs (e.g. "fully on Android, partly on iOS"). Under the table, list for
-each Asana blocker: real or not, solvable in autotests or not, and for which cases. Then the shared autotests
-work, and the open questions. End with the honest status, e.g. "nothing has run on a device yet".
+Put the group into the case's Status and Comment, split by platform where the answer differs (e.g. blockers
+`— (Android); D (iOS)`). Each Asana blocker gets a row in § Blockers saying whether it is real and whether the
+tests side can solve it; an unreal one goes under the table as "Not a real blocker". The shared autotests work
+and the open questions go into § Plan. State the honest status in the Task table header line, e.g. "nothing has
+run on a device yet".

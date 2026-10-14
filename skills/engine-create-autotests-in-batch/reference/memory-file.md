@@ -25,7 +25,7 @@ Find the stage from the file:
 | What the file shows | Continue with |
 |---|---|
 | Skeleton, some per-case sections missing | Launch analysis subagents only for the missing cases |
-| All cases analysed, no § Plan | Cross-checks, bottom line, plan |
+| All cases analysed, no § Plan | Cross-checks, status view (both tables), plan |
 | § Plan present, no approval in "Batch events" | Present the plan again and ask for approval |
 | Approval recorded | The first item in "Merge order" that is not `green PR` / `draft PR` / `blocked` / `merged` |
 
@@ -40,8 +40,9 @@ the correction as a batch event.
 
 ## Layout
 
-Sections in this order. The orchestrator owns every section except a per-case section during phase 2,
-which belongs to that item's subagent.
+The top of the file is the **status view**: two tables a person can read in one minute without scrolling into
+the logs. Everything below them is working memory. Sections in this order. The orchestrator owns every section
+except a per-case section during phase 2, which belongs to that item's subagent.
 
 ```markdown
 # Batch: <parent task name>
@@ -54,38 +55,76 @@ which belongs to that item's subagent.
 - Started: <YYYY-MM-DD>
 - Current goal: <analysis | waiting for approval | execution | after merges>
 
-## Bottom line (<date>)          ← added at the end of phase 1, kept at the top
-## Blockers
-## Task table
+## Task table                    ← status view, part 1: one row per case, always current
+## Blockers                      ← status view, part 2: one row per blocker (A, B, C, ...), always current
+## How to resume                 ← cold-start steps + watchdog prompt (phase 2)
 ## Plan                          ← phase 1 output; includes "Merge order"
 ## Known repo facts (origin/master <sha>)
 ## Batch events
 ## Shared findings
 ## VSO-<id>                      ← one per case (framework items: ## F<n> <slug>)
-## Summary (<date>)              ← end of phase 1: verdict groups, blockers, shared work, open questions
-## Asana summary                 ← at the end: what was posted, story gids
+## Research: <topic>             ← optional, one per probe or investigation
 ```
 
-### Blockers
-
-The Asana dependencies of the subtasks. Link the blocker task itself. Quote a comment only when it changes
-the meaning. Blocker tasks the batch creates for its framework items go here too, marked `(created by batch, F<n>)`.
-
-| Blocker | Description | Blocks (this batch) |
-|---|---|---|
-| [<gid>](<url>) | <blocker task name> | VSO-<id>, VSO-<id> |
+Do not add other summary sections (bottom line, summary, investigation result, a separate list of Asana
+blockers). Their content belongs in the two status tables. When an old summary is superseded, fold what is
+still true into the tables and delete it; the history stays in "Batch events".
 
 ### Task table
 
-| Case | Asana subtask | Blocker | Solvable in autotests only | Status | Comments |
-|---|---|---|---|---|---|
+```markdown
+## Task table (updated <YYYY-MM-DD>)
 
-- *Solvable in autotests only*: `yes` / `partly` / `no` / `n/a` (no blocker).
-- *Status*, phase 1: `not analysed` → `analysed: automatable` / `analysed: automatable with caveats` /
-  `analysed: not automatable` (+ `without product change` or `manual`).
-- *Status*, phase 2: `in progress` → `green PR` / `draft PR` / `blocked by <item>` / `out of scope` → `merged`.
-- *Comments*: platforms, the substitute checks, what a first run must prove. In phase 2 add the branch, the
-  PR, runs used and the device, and replace the analysis text only if it is no longer true.
+Status: 🟢 green PR · 🟡 draft PR · 🔵 in progress · ⚪ not started · 🔴 blocked (data/tests side) ·
+⛔ blocked (product/infra) · ✅ merged. Blockers: see § Blockers.
+Framework PRs (merge first, in order): #<n> <what> → #<n> <what>.
+
+| Case | Asana | Platforms | Blockers | PRs | Status | Comment |
+|---|---|---|---|---|---|---|
+| VSO-<id> <title> | [subtask](<url>) | Android, iOS | A, C (Android); D (iOS) | [#<n>](<url>) on [#<n>](<url>) | 🟢 green PR | <one line> |
+```
+
+- **Asana**: a short link text (`[subtask](url)`), never a bare URL.
+- **Blockers**: only ids from § Blockers, split by platform when they differ; `—` when none.
+- **PRs**: the case's own PR and the PRs it stacks on. `—` when none.
+- **Status**: one emoji plus a short word. In phase 1, before any PR, use ⚪ with the verdict in the comment
+  (e.g. `⚪ not started — automatable with caveats`).
+- **Comment**: one line, only what the blocker ids and status don't already say (a substitute check, what a first
+  run must prove, a review the PR waits for). Details go to the per-case section.
+- Order rows by status: green, draft, in progress, not started, blocked.
+
+### Blockers
+
+```markdown
+## Blockers
+
+<one line: how many blockers the tests side can solve alone>
+
+| Id | Blocker | Cases | Python alone? | Who has to act / way out | Asana |
+|---|---|---|---|---|---|
+| A | <what is missing and the evidence, short> | VSO-<id>, ... | ❌ / ✅ / ✅ done | <team or person, and the concrete steps; then what the tests side adds> | [<short name>](<url>) / none yet |
+
+Not a real blocker: [<short name>](<url>) — <why>.
+Next startable work: <blocker id → what it unblocks>.
+```
+
+- One row per blocker, whatever its source: an Asana dependency of a subtask, a hidden blocker the analysis
+  found, a data source that turned out missing, a product or infra change. Ids are letters, stable once given;
+  never reuse a letter.
+- **Python alone?**: ✅ when the change fits in vso-engine-autotests (new steps, services, utils, config);
+  ❌ when another team must act first (product code, access, infra, a Qase decision); `✅ done` when a batch PR
+  solved it (name the PRs). Mixed cases are ❌, with the tests-side part named in the next column.
+- **Who has to act / way out**: the owner and the concrete request, numbered when there are several steps; then
+  what the tests side adds afterwards.
+- **Asana**: link the blocker task with a short text. Blocker tasks the batch creates for framework items go here
+  too. An Asana dependency that is not a real blocker goes under the table as "Not a real blocker".
+
+### Keeping the status view current
+
+Update both tables in the same edit as the event that changes them, before you reply to the user: a verdict
+arriving or changing, a PR opened, turned draft or green, a merge, a rebase, a probe result, a new blocker or a
+solved one. Change the `updated <date>` stamp. Log the change in "Batch events". After every user request that
+changes scope or status, re-read both tables and fix anything stale.
 
 ### Plan and Merge order
 

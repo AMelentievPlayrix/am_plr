@@ -62,8 +62,8 @@ Never write secrets or tokens into it.
    then go on with what you know and record the gap.
 2. **Survey the repo** on `origin/master` of vso-engine-autotests, following [analysis.md](reference/analysis.md)
    § Repo survey. If the tree is dirty, record that and leave it alone. Never modify it in phase 1.
-3. **Write the skeleton** of the memory file: header, blockers table, task table, "Known repo facts", "Batch events"
-   ([memory-file.md](reference/memory-file.md) § Layout).
+3. **Write the skeleton** of the memory file: header, the status view (Task table + Blockers table, one row per case
+   and per Asana blocker), "Known repo facts", "Batch events" ([memory-file.md](reference/memory-file.md) § Layout).
 4. **Fill in the analysis brief** from [analysis.md](reference/analysis.md) § Brief, including the "SDK-specific
    hints" slot, which comes from the survey.
 5. **Launch one read-only analysis subagent per case**, all in parallel and in the background. Subagents never
@@ -71,7 +71,8 @@ Never write secrets or tokens into it.
 6. **As each report arrives**, update its row, add its section, and move anything shared into "Shared findings".
    Verify contradictions, and claims that change other cases' verdicts, in source yourself. Record later
    corrections and revise earlier rows ([analysis.md](reference/analysis.md) § Cross-checking).
-7. **Write the summary and the "Bottom line" table** ([analysis.md](reference/analysis.md) § Verdicts and bottom line).
+7. **Bring the status view up to date**: every case row and every blocker row final for phase 1
+   ([analysis.md](reference/analysis.md) § Verdicts and the status view).
 
 ## Phase 1 output — the plan
 
@@ -139,10 +140,11 @@ Each one cost a real batch time. The briefs repeat the ones that apply to subage
 
 ## Final report to the user
 
-1. `🟢 Done`: green PRs, with case, PR and platforms.
-2. `🟡 Partly automatable`: what cannot be checked, one line each.
-3. `🔴 Not automatable`: draft or skipped items, each with a one-line reason (`PRODUCT DEFECT?` where it applies).
-4. `ℹ️ Merge order` (the table), Asana comments posted, and the memory file path.
+Bring the status view up to date first, then report from it:
+
+1. The **Task table** (same columns as in the memory file).
+2. The **Blockers table**, with "Python alone?" and who has to act.
+3. Next startable work, merge order, Asana comments posted, and the memory file path.
 
 ## Hard prohibitions
 
