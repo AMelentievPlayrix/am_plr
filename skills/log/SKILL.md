@@ -1,7 +1,7 @@
 ---
 name: log
 description: Keep a short dated log of my work in am_plr/work-log and report on it for bi-weekly meetings. Write mode (`/am:log`, "update am_log", "log this to am_log") adds what was done in the current chat to the log, then commits and pushes it. Report mode (`/am:log info this week`, `info last week`, `info from <date> to <date>`) prints counts and notable items for that period.
-argument-hint: "[info this week | info last week | info from <date> to <date>]"
+argument-hint: "[info] [this week | last week | from <date> to <date>]"
 allowed-tools: Bash(git -C *am_plr *) Bash(date *)
 ---
 
@@ -20,7 +20,7 @@ perf reports", and explain what made some items slow.
 
 Mode by `$ARGUMENTS`:
 - empty, or a plain request like "update am_log" → **write mode**;
-- starts with `info` → **report mode**.
+- starts with `info`, or is just a range (`this week`, `last week`, `from … to …`) → **report mode**.
 
 ## Storage format
 
