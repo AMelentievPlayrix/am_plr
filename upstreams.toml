@@ -50,3 +50,11 @@ env = { VICTORIAMETRICS_URL = "${VICTORIAMETRICS_URL?}" }
 [mcp.cats-mcp-server]
 command = "${VENV_PYTHON}"
 args = ["${upstream.perfect-project}/cats2/ai/mcp_servers/cats/cats-mcp-server.py"]
+
+# VSO editor over CATS (editor_* methods), perfect-project PR #20040. Starts only while perfect-project is on a
+# branch that has libs/vso/scripts/editor_agent; on others /mcp shows it as failed. The workspace is the checkout
+# editor_agent lives in. Group "danger" (delete node/asset) is left out on purpose - append it when needed.
+[mcp.vso-editor]
+command = "${VENV_PYTHON}"
+args = ["-m", "editor_agent.mcp.server", "--groups", "core,edit,prefab,assets"]
+env = { PYTHONPATH = "${upstream.perfect-project}/libs/vso/scripts", PYTHONUTF8 = "1" }

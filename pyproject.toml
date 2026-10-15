@@ -37,6 +37,11 @@ dependencies = [
 	"pytest==8.3.5",
 	"reportportal-client==5.6.7",
 	"ci-tc==0.3.44",
+
+	# vso-editor (perfect-project/libs/vso/scripts/editor_agent, PR #20040): the MCP server needs only mcp,
+	# the daemon it autostarts on the same interpreter speaks WebSocket to CATS.
+	# Range matches perfect-project/libs/vso/pyproject.toml.
+	"websockets>=12,<16",
 ]
 
 [tool.uv]
