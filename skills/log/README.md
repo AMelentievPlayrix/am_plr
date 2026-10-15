@@ -14,7 +14,7 @@ update am_log                        same, from any chat in any repo
 
 - Write mode reads the current chat and adds one short line per item to `am_plr/work-log/YYYY-MM.md`,
   with an optional `hard:` note on why something took long. A repeated call updates lines instead of
-  duplicating them.
+  duplicating them. Work on am_plr itself (skills, rules, setup, memory files) is never logged.
 - If the log changed, it commits only `work-log/` through `am:commit` (English message,
   `Update work log for <date>`) and pushes. Other uncommitted changes in am_plr are left alone. On a
   rejected push it retries once with `pull --rebase --autostash`; it never force-pushes.

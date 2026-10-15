@@ -65,7 +65,7 @@ This list is the single source of categories. To add one, add a row here; old en
 | `blocker-found` | blocker (bug blocking tests or release) found; `/area` required |
 | `blocker-fixed` | existing blocker fixed or verified fixed; `/area` required |
 | `perf` | perf report, benchmark or perf alert investigated |
-| `other` | anything else worth mentioning (tooling, skills, reviews, release testing) |
+| `other` | anything else worth mentioning (tooling outside am_plr, reviews, release testing) |
 
 A blocker found and fixed in the same chat gets two lines: `blocker-found` and `blocker-fixed`.
 
@@ -76,6 +76,10 @@ A blocker found and fixed in the same chat gets two lines: `blocker-found` and `
    blockers found or fixed, perf reports investigated, other notable work. Take IDs and links only from
    the chat. Count only finished work; work that is still going on goes in as `other` with
    "в процессе", or is left out if trivial.
+   **Never log work on the am_plr repo itself**: it is my internal tooling. This covers its skills,
+   agents, rules, MCP and workspace setup, scripts, memory and artifact files (`artifacts/…`) and the
+   work log. If an item mixes am_plr work with other work, log only the other part and drop am_plr
+   refs (am_plr commits, paths). If only am_plr work is left, treat it as "nothing to log".
    **Platforms of an autotest** (each platform is usually separate work: its own run, fixes and
    validation, so the platform-weighted count shows the real volume). Determine them in this order:
    - the platforms the chat shows the test was implemented and validated on;
