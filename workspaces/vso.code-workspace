@@ -5,6 +5,10 @@
 			"path": ".."
 		},
 		{
+			"name": "teamcity-settings-pp",
+			"path": "../../teamcity-settings-pp"
+		},
+		{
 			"name": "vso-engine-autotests",
 			"path": "../../vso-engine-autotests"
 		},
