@@ -15,6 +15,10 @@ How to make commits lives in the `am:commit` skill; this rule only sets their la
 
 - Keep identifiers, API, class and function names, library names, file paths and other naturally English
   terms in English inside the Russian text. Do not translate them.
+- This includes programming and engineering terms that developers use in English: language concepts
+  (`smart pointer`, `raw pointer`, `reference`, `template`, `lambda`), build and tooling terms (`build`,
+  `snapshot dependency`, `unity build`, `lock file`), test terms (`flaky`, `baseline`, `fixture`).
+  Write `smart pointer, а не raw pointer`, not `умный указатель, а не сырой`. When unsure, keep English.
 - An explicit instruction from the user overrides this table.
 
 ## Style
@@ -23,6 +27,8 @@ How to make commits lives in the `am:commit` skill; this rule only sets their la
 - Write for a teammate who never saw the session.
 - Report honestly. If something is unverified, say so instead of implying a stronger result.
 - Never invent a reason you cannot infer from the diff or the evidence. Ask instead.
+- Use a plain hyphen `-` as the dash, never the em dash `—` or en dash `–`: `Frontend - падает каждую ночь`,
+  `14-16.10`.
 
 ## Commits
 
@@ -43,7 +49,7 @@ Do not hand-roll commits or restate that policy in other skills.
 
 ```markdown
 ## Что сделано
-<1–3 предложения: что PR добавляет или чинит.>
+<1-3 предложения: что PR добавляет или чинит.>
 
 ## Причина
 <Для фикса: корневая причина с доказательством. Для нового: зачем и почему сейчас.>
@@ -59,7 +65,7 @@ Do not hand-roll commits or restate that policy in other skills.
 - Asana: <ссылка на задачу>
 
 ## Риски и ограничения
-<Что не проверено, известная нестабильность — или «нет».>
+<Что не проверено, известная нестабильность - или «нет».>
 ```
 
 - Summarise the work, not the log. Never paste `git log` into the body.
