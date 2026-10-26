@@ -237,13 +237,19 @@ python3 $PERF/draft_verdicts.py --analysis $PR_WORK/analysis.json --history $PR_
 
 ## Step 7 - chat report
 
-One message:
+One message, overview first, nothing left out. The Asana drafts carry the details (failed tests, causes,
+evidence, devices, links), so the overview does not repeat them:
 
-1. Table: subtask | build (link) | status | verdict | one-line reason.
-2. Overall verdict: **all good** (every build green or explained) or **not good** (list the blocking items).
-3. The Russian comment drafted for each subtask (format below), with the subtask link.
+1. Overall verdict in one line: **all good** (every build green or explained) or **not good: <N> blocking**.
+2. One line per build: subtask, build link, status, verdict and the reason in a few words
+   (`[OSnP/Resources] Core <link> - FAILURE - explained: VSO-<id>, backport without follow-up`).
+3. The Russian comment drafted for each subtask (format below), in full, with the subtask link. This is the
+   exact text stop 2 approves.
 4. The Russian Slack reply draft (format below), with the thread link, if a thread was given.
-5. "Recommendations" - separate from the drafts: reruns, references to update, bugs worth filing.
+5. Recommendations, only if there are any: reruns, references to update, bugs worth filing.
+
+Shorter is good, losing information is not: every failed build, every blocking item and every unverified
+point must appear in the overview or in a draft.
 
 ## Step 8 - confirm the Asana and Slack writes (stop 2)
 
