@@ -71,6 +71,7 @@ Open Claude Code in any project. The plugin is enabled for all of them:
 /am:plan-review             review a plan: major issues only, as questions with proposed fixes
 /am:code-review             review finished changes against the plan and rules: verdict + findings
 /am:log                     log this chat's work to work-log/ (commit + push); /am:log info this week for a report
+/am:release-check           start release autotests/perf for a minor version, analyse, close the Asana subtasks
 ```
 
 Claude also picks them up automatically from their descriptions. Team skills keep their own names

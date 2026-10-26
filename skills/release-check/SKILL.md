@@ -1,0 +1,311 @@
+---
+name: release-check
+description: Run the release check for a PerfectProject minor version end to end - find the TeamCity builds for the Asana release subtasks ([Render], [OSnP/Resources], [GameUI], [Perf]), start them, wait for them, analyse the results (functional via failed tests and logs, perf via perf-report), report in chat, and after confirmation comment on the subtasks, assign them (Anton Melentiev by default), complete them and reply in the release Slack thread. Use for "/am:release-check 2026.2.7 both <task> <slack thread>", "run release autotests for 2026.2.7", "check the release, perf only".
+argument-hint: "<minor version> <auto|perf|both> [Asana container or subtask links] [Slack thread link] [assignee]"
+disable-model-invocation: true
+allowed-tools: Read Write Edit Bash(python3 *) Bash(*/.venv/bin/python -I *) Bash(mkdir -p /tmp/release-check-*) mcp__teamcity mcp__asana mcp__victoriametrics mcp__slack Monitor
+---
+
+# Release check
+
+Automates the release-testing loop for one PerfectProject minor version: Asana subtasks → TeamCity builds →
+start → wait → analyse → chat report → Asana and Slack. Two stops for the user: before builds start and
+before anything is written to Asana or Slack. Everything else runs on its own, and anything unclear becomes
+a question.
+
+Language, style, Asana and Slack rules come from [communication.md](../../rules/communication.md):
+chat in English, Asana comments and the Slack reply in Russian, plain hyphen `-` as the dash. Stop 2 (step 8)
+is the approval of the Slack text that rule asks for.
+
+## Hard rules
+
+- **Ask instead of guessing.** A missing input, a `buildTypeId` that does not exist, an unclear branch, a
+  subtask that matches no build, a person matching several Asana users: stop and ask with AskUserQuestion,
+  offering the likely answers as options. Never invent a `buildTypeId`, branch, build id or user.
+- **Two confirmations, always:** the build plan before any `trigger_build` (step 3), and the Asana and Slack
+  writes before any comment, assignment, completion or Slack message (step 8).
+- **Slack posts under the user's own name**: send exactly one reply, only in the given thread, only with the
+  text the user approved. Never post to the channel itself, never edit or delete messages, never post when
+  the Slack MCP is not connected.
+- **Asana is written only when every result in the run is good** (green, or an explained non-blocking
+  failure - step 6). Otherwise report and ask; write to Asana only if the user then says so explicitly.
+- **Touch only the subtasks covered by this run.** Never complete the container task, never touch
+  subtasks such as [Migration] or [Resave], never re-status or reassign anything else.
+- **A TeamCity `FAILURE` is not a finding by itself.** Read the cause before calling it a failure (step 6).
+- **Never cancel a build** unless the user asks.
+- **Never print the TeamCity token** or other secret values; refer to variables by name. `get_build`
+  returns build properties that include vault references - never copy them into chat or files.
+
+## Paths and constants
+
+- `<am_plr>`: the grandparent of this skill's base directory. `<pp>`: `<am_plr>/../perfect-project`.
+- Mapping: [config/build_mapping.json](config/build_mapping.json). Wait script: `scripts/wait_builds.py`.
+- Perf analysis scripts: `PERF=<pp>/.claude/skills/perf-report/scripts` (read `<pp>/.claude/skills/perf-report/SKILL.md`
+  when something there fails).
+- Default assignee: **Anton Melentiev**, Asana user gid `1207120594833706`.
+- Build links, everywhere (chat and Asana), in one format only:
+  `https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=<buildTypeId>`, built from the
+  build id and `buildTypeId` that TeamCity returned. Never pass on the `webUrl` that TeamCity returns
+  (`teamcity.playrix.com/build/<id>` or `.../buildConfiguration/...`); the wait script already prints links in
+  the right format.
+- Working folder: `WORK=/tmp/release-check-<version>-<YYYYMMDD>`. Keep the state in `$WORK/state.json`
+  (version, suite, container and subtask gids, build plan, triggered build ids, verdicts, Asana writes
+  done) and update it after every step, so a resumed or compacted session continues from the file
+  instead of redoing work. Large outputs (logs, failed tests, perf files) go to `$WORK`, not into chat.
+
+## Step 0 - inputs
+
+Parse `$ARGUMENTS` and the message:
+
+| Input | Expected | If missing or unclear |
+|---|---|---|
+| Version | minor `X.Y.Z` (e.g. `2026.2.7`); major = `X.Y` | ask; if only `X.Y` was given, ask which minor (the container name needs it) |
+| Suite | `auto`, `perf` or `both` | ask |
+| Tasks | container link, or subtask links | search (step 1), then confirm |
+| Assignee | a name | default Anton Melentiev |
+| Slack thread | `https://<workspace>.slack.com/archives/<channel>/p<ts>` | ask in step 3: a link, or no Slack reply this run |
+
+Only the explicit user words change the assignee: "assign to Sasha", "assignee Руслан Байбеков".
+
+Slack thread link → channel id and thread ts: `.../archives/C0CB6H4N672/p1793004591268139` → channel
+`C0CB6H4N672`, ts `1793004591.268139` (insert a dot before the last 6 digits). A `?thread_ts=...` query in the
+link (a link to a reply) wins: it names the parent thread. Read the thread once with
+`slack_read_thread(channel_id, message_ts, response_format="concise")` to confirm it is about this release, and
+ask if it is not. If no Slack tool is available, say
+that the `slack` MCP is not connected (run `/mcp` and authorise it) and carry on without Slack.
+
+## Step 1 - tasks
+
+1. With a container link or gid: `asana_get_task` with `opt_fields=name,completed,subtasks.name,subtasks.gid,subtasks.completed,subtasks.assignee.name`.
+   With subtask links: fetch each, and its `parent`.
+2. Without tasks: `asana_typeahead_search` (`resource_type=task`, query `Тестирование релиза <version>`), keep
+   names matching `container_name_pattern`. Exactly one hit → offer it in the step 3 confirmation. Zero or
+   several → ask for the link now.
+3. Match subtask names to `subtask_name_pattern` in the mapping, keep those whose `suite` is in the run
+   (`both` = auto + perf). Report subtasks of the chosen suite that are missing from the container, and
+   ask about any subtask with a test-like name (`[...] Запущены ...`) that matches no pattern.
+4. A subtask that is already completed: ask whether to include it (rerun) or skip it.
+
+## Step 2 - builds and branch
+
+1. Substitute `{major}` (`2026_2`) and `{major_dotted}` (`2026.2`) into every `build_type_id` and into
+   `default_branch` (`stage/v2026.2`).
+2. Check each config exists and see where it runs:
+   `list_builds(build_type=<id>, count=5, branch="default:any")`. **Always pass `branch="default:any"`**:
+   without a branch filter TeamCity returns only default-branch builds, so a live config looks empty.
+   A 404 means the config id is wrong for this release → ask for the real id, then update the mapping.
+3. Branch: use `default_branch` when the recent builds of that config ran on it. If they ran on another
+   release branch (e.g. `release/v2026.2`), or there are none, ask which branch to use.
+4. Note the latest finished build per config (id, status, statusText): it is the baseline for step 6.
+
+## Step 3 - confirm the plan (stop 1)
+
+Show the plan in chat, then ask with AskUserQuestion (options: start all / change something / cancel):
+
+```
+Release check 2026.2.7, suite: both, branch stage/v2026.2
+Container: Тестирование релиза 2026.2.7 <link>
+[Render]          Windows_Test_Cats_Render, RunScreenshotsTests
+[OSnP/Resources]  Windows_Test_Cats_Resources, Windows_Test_Cats_Core
+[GameUI]          Windows_Test_Cats_Frontend
+[Perf]            QABenchmarkBundle (Android, iOS, iOS Metal)
+Assignee after a good result: Anton Melentiev
+Slack reply (after approval): <thread link> - "<first words of the parent message>"
+```
+
+Include anything you resolved by search or default (container, branch, assignee), so the user sees it.
+
+## Step 4 - start builds
+
+For each planned config: `trigger_build(build_type=<id>, branch=<branch>, comment="release-check <version>")`.
+Record the returned build id and web URL in `state.json` right away. If a trigger fails, report the error
+as-is and ask (retry / skip that build / stop); keep the builds that did start. Composite configs
+(`RunScreenshotsTests`, `QABenchmarkBundle`) return the composite's id; the wait script lists their children.
+
+As soon as the triggers are done, post the started builds in chat so the user can open them, one line each:
+
+```
+Started (branch stage/v2026.2):
+[Render]          Windows_Test_Cats_Render - https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_2026_2_Windows_Test_Cats_Render
+[Perf]            QABenchmarkBundle - https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_2026_2_QABenchmarkBundle
+```
+
+Take `<id>` and `buildTypeId` from the `trigger_build` response (`id`, `build_type_id`); never guess an id.
+
+## Step 5 - wait
+
+Start one Monitor (`timeout_ms` 1800000, description `release-check <version> builds`) on:
+
+```
+<am_plr>/.venv/bin/python -I <skill>/scripts/wait_builds.py <id> <id> ... --interval 60
+```
+
+It prints one line per state change, each with the build link (`queued` → `running` → `finished
+SUCCESS|FAILURE "<statusText>"`), lists the snapshot dependencies under each line (`dep ...` lines: the
+children of a composite, so you see which one failed) and ends with `ALL FINISHED`. On the first
+`dep` lines of a composite, post the children's links in chat (e.g. Android, iOS, iOS Metal for the bundle),
+and post a short line with the link whenever a build finishes, so the user can follow along. When the Monitor expires before that, re-arm it with the
+same ids: it re-prints the current state. Lines starting with `ERROR` (unknown build, TeamCity unreachable)
+→ report and ask. The token comes from `TEAMCITY_TOKEN` or `<am_plr>/mcp/.env`; if the script says it is not
+set, tell the user to fill `mcp/.env` and stop.
+
+While waiting, start the analysis of builds that already finished; do not poll with MCP calls.
+
+## Step 6 - analyse
+
+Give every build one verdict: **green**, **explained** (failed, but the cause is known and non-blocking, with
+evidence), or **blocking** (a real problem, or a cause you could not establish).
+
+### Functional builds (`functional_tests`)
+
+1. `SUCCESS` → green; take the counts from `statusText` (`Tests passed: 971, ignored: 11`).
+2. `FAILURE` → `get_failed_tests(build=<id>)` (save to `$WORK`), and for failures without a clear traceback
+   `get_build_log(build=<id>, grep="error|traceback|assert", context_lines=5, tail_lines=400)`. A red build with
+   no failed tests is an infrastructure or build problem: find it in the log.
+3. For each failed test, look for evidence that it is explained:
+   - it also failed in the baseline build from step 2.4 (same test, same error) - compare `get_failed_tests`;
+   - the same subtask of the previous minor (`Тестирование релиза <X.Y.Z-1>`, read its comments with
+     `asana_get_stories_for_task`) gave a cause for this test, and the cause still applies;
+   - a known infrastructure pattern: agent or device problem in the log, BrowserStack "not supported ... will
+     be ignored", reference screenshots fixed on master but not backported.
+   A test that also fails in the baseline is not automatically explained: it is explained only with a
+   concrete cause (test bug, known product bug already tracked, infrastructure). Write the cause and the
+   evidence (build, story or task link) next to the verdict. No concrete cause → blocking.
+4. Infrastructure failure of one child (e.g. a Mac screenshot agent): recommend rerunning that config and ask.
+
+Precedents (verify the specific cause matches; never pattern-match on status alone):
+- Perf Android benchmark FAILURE only because BrowserStack does not support Xiaomi Redmi Note 9: all
+  `test_performance` runs passed (Asana task `1217906673515578`).
+- 2026.2 screenshot tests: 2 tests failed on the release branch because their reference screenshots were
+  fixed on master and never backported - judged not a release bug.
+- 2026.2.6 Render VSO-8600 and Core VSO-14342: caused by backport b485a4cff6f (#18813) without its master
+  follow-up #18893 - a real cause found from git history; the subtask was completed with that explanation.
+
+### Perf build (`perf_report`)
+
+Analyse with the perf-report scripts (VPN required); they write to files, so nothing large passes through chat.
+
+```
+PR_WORK=/tmp/perf-report-<branch with / replaced by _>-<YYYYMMDD>
+python3 $PERF/fetch_metrics.py --branch <branch> --days 30 --out $PR_WORK/raw_data.json
+python3 $PERF/analyze.py --in $PR_WORK/raw_data.json --out $PR_WORK/analysis.json --summary $PR_WORK/summary.md --focus <focus>
+python3 $PERF/check_device_history.py --analysis $PR_WORK/analysis.json --include-device-section --out $PR_WORK/device_history.json
+python3 $PERF/draft_verdicts.py --analysis $PR_WORK/analysis.json --history $PR_WORK/device_history.json --out $PR_WORK/verdicts.draft.json
+```
+
+- `<branch>`: the branch the children actually ran on (`branchName` in the wait output or `get_build`).
+- `<focus>`: the UTC date(s) of the children's `finishDate` (`20261012T163418+0000` → `2026-10-12`); one day →
+  `YYYY-MM-DD`, several → `FIRST..LAST`.
+- A failure about VPN, branch, certificate or `--focus`: pass the message to the user as-is.
+- Read only `summary.md`, `device_history.json` and `verdicts.draft.json`. Edit the draft into
+  `$PR_WORK/verdicts.json` (drop repeats, re-check every `alarm`); it is a draft, never the final word.
+- Map: `unit_flaky` / `farm_recurring` → farm noise (explained); `isolated` / `shared_with_branch` → not
+  explained by the farm → blocking until a rerun disproves it; a device with no data (e.g. all attempts
+  errored) → blocking until rerun.
+- If `summary.md` recommends a `QABenchmarkBundle` rerun, or any device is blocking: ask (rerun the bundle →
+  back to step 4 for that config only / accept with a reason / stop). In 2026.2.6 a rerun cleared both an
+  iPhone 16 with no data and an iPhone 17 Metal deviation.
+- Grafana: use the `grafana_url` values from the perf-report files. Generic dashboards: FPS
+  `https://graphite.local.playrix.com/d/eekd8qvw0czr4f?from=now-14d&to=now`, benchmarks
+  `https://graphite.local.playrix.com/d/fdrfo71gl1q80a?from=now-14d&to=now`. Never invent a link.
+- `victoriametrics` MCP: only for a quick follow-up the scripts do not answer. Always scope selectors with
+  `team="perfect-project", device_farm_type="BS"` plus `branch`, `metric` and ideally `device`/`point`; include
+  `metric` in `list_label_values`' `match`; use a coarse `step`; if a response says `truncated`, narrow it.
+
+## Step 7 - chat report
+
+One message:
+
+1. Table: subtask | build (link) | status | verdict | one-line reason.
+2. Overall verdict: **all good** (every build green or explained) or **not good** (list the blocking items).
+3. The Russian comment drafted for each subtask (format below), with the subtask link.
+4. The Russian Slack reply draft (format below), with the thread link, if a thread was given.
+5. "Recommendations" - separate from the drafts: reruns, references to update, bugs worth filing.
+
+## Step 8 - confirm the Asana and Slack writes (stop 2)
+
+- **All good**: one AskUserQuestion with two questions:
+  - Asana: post, assign to <assignee> and complete / post only / do not touch Asana. Name the assignee and
+    list the subtasks.
+  - Slack (only if a thread was given): send the reply as shown / do not send. If the user edits the text,
+    show the new version and ask again before sending.
+- **Not good**: do not offer the Asana write. Ask what to do: rerun specific builds (back to step 4), treat an
+  item as explained with the user's reason (then re-ask this step), or stop and keep the drafts. A Slack reply
+  that reports the problems may be offered too, but only with its exact text in the question.
+
+## Step 9 - write to Asana
+
+1. Assignee: Anton Melentiev → gid `1207120594833706`. Anyone else → `asana_typeahead_search`
+   (`resource_type=user`, the name); exactly one match → use its gid; zero or several → ask with the
+   candidates as options.
+2. For each subtask in the run: `asana_create_task_story(task_id, text=<comment>)`, then
+   `asana_update_task(task_id, assignee=<gid>, completed=true)` (or comment only, if that was the choice).
+   Record each done write in `state.json`, so a retry never posts a comment twice.
+3. Re-read each subtask (`asana_get_task`, `opt_fields=completed,assignee.name`) and report what changed with
+   links. If a write failed, say which and why; do not retry silently.
+
+Tool names: this session's Asana MCP may be V1 (`asana_get_task`, `asana_update_task`,
+`asana_create_task_story`) or V2 (`get_task`, `update_tasks`, `add_comment`); use whichever exists.
+
+## Step 10 - reply in Slack
+
+Only if the user approved it in step 8. Do it after the Asana writes, so the reply can say the subtasks are
+closed.
+
+1. Send the approved text, unchanged: `slack_send_message(channel_id=<channel>, thread_ts=<ts>, message=<text>)`
+   with the channel and ts from step 0. Leave `reply_broadcast` unset, so the reply stays in the thread.
+2. Record it in `state.json` (`slack_reply_sent` and the returned link), so a retry never posts twice.
+3. Report the message link the tool returns. If sending fails, show the error and the text, so the user can
+   paste it by hand.
+
+If the user wants to review in Slack itself, `slack_send_message_draft` with the same channel and ts puts the
+reply in their Drafts instead of sending it.
+
+## Slack reply format (Russian)
+
+Short: the overall result, one line per subtask with its build link(s), the Asana container link.
+`slack_send_message` takes standard Markdown: lists, `**bold**` and plain links; no tables or headings. An
+illustration, not a template:
+
+```
+Тестирование релиза 2026.2.7 - автотесты и перф проверены, блокеров нет.
+- Render - зелёный: <viewLog link>; скриншоты - ок: <viewLog link>
+- OSnP/Resources - Resources ок: <link>; Core - 1 известное падение (VSO-14342, не блокер): <link>
+- GameUI - зелёный: <link>
+- Perf - регрессий нет, отклонения объясняются фермой BrowserStack: <link>
+Задачи закрыты: <container link>
+```
+
+## Comment format (Russian)
+
+Short plain sentences a teammate reads at a glance; a link to every build; one comment per subtask. These
+illustrate the style, they are not templates to copy word for word:
+
+```
+Render - прогон зелёный, падений нет: passed 827, ignored 56.
+https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_2026_2_Windows_Test_Cats_Render
+Скриншотные тесты - всё ок: https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_2026_2_RunScreenshotsTests
+```
+
+```
+Core: https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_2026_2_Windows_Test_Cats_Core
+Упал VSO-14342 (https://app.qase.io/case/VSO-14342). Причина: <конкретная причина и доказательство - коммит, задача, прошлый релиз>. Не блокер для релиза.
+Resources - всё ок: https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_2026_2_Windows_Test_Cats_Resources
+```
+
+```
+Итоги перф-тестов (BrowserStack), ветка stage/v2026.2, сборки <id> (Android), <id> (iOS), <id> (iOS Metal)
+https://teamcity.local.playrix.com/viewLog.html?buildId=<bundle id>&buildTypeId=PerfectProject_release_2026_2_QABenchmarkBundle
+https://graphite.local.playrix.com/d/eekd8qvw0czr4f?from=now-14d&to=now
+
+1. Xiaomi Redmi Note 9 - ферма его не поддерживает, девайс пропущен. Из-за этого сборка Android красная, сами тесты прошли.
+2. iPad Air 5, SM_S931B - скачки FPS. Такое на этих моделях уже было много раз за 90 дней на других ветках - глюк фермы.
+
+Вывод: реальных регрессий перфа не найдено, все отклонения объясняются нестабильностью девайсов фермы BrowserStack.
+```
+
+## Before finishing
+
+Check: every planned build was started and finished (or the user chose to skip it); every verdict has a
+reason; Asana and Slack were written only after stop 2, Asana only for subtasks in this run, Slack only as one
+reply in the given thread with the approved text; the final message lists what was written, with links. Say plainly what was not done or not verified.

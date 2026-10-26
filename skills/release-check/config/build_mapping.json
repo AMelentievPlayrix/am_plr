@@ -1,0 +1,66 @@
+{
+  "_comment": "Release container subtask -> TeamCity builds. {major} is the major release with dots replaced by underscores (minor 2026.2.7 -> major 2026.2 -> 2026_2): every minor of a major runs on the same release_<major> configs. {major_dotted} is the same major with dots (2026.2). Confirm every resolved buildTypeId and the branch on TeamCity before use (SKILL.md, step 2); update this file when a release cycle shows a different mapping.",
+  "teamcity_project_prefix": "PerfectProject_release_{major}_",
+  "default_branch": "stage/v{major_dotted}",
+  "container_name_pattern": "^Тестирование (релиза|минора) {version}$",
+  "subtasks": [
+    {
+      "key": "render",
+      "suite": "auto",
+      "subtask_name_pattern": "^\\[Render\\]",
+      "builds": [
+        {
+          "build_type_id": "PerfectProject_release_{major}_Windows_Test_Cats_Render",
+          "analysis_method": "functional_tests",
+          "notes": "2026.2.6: build 37427915, stage/v2026.2."
+        },
+        {
+          "build_type_id": "PerfectProject_release_{major}_RunScreenshotsTests",
+          "analysis_method": "functional_tests",
+          "notes": "Composite over Windows/Mac/iOS/Android screenshot configs. 2026.2.6: build 37427854, stage/v2026.2. Mac agents had infrastructure issues; a Mac rerun on another agent was green."
+        }
+      ]
+    },
+    {
+      "key": "osnp_resources",
+      "suite": "auto",
+      "subtask_name_pattern": "^\\[OSnP/Resources\\]",
+      "builds": [
+        {
+          "build_type_id": "PerfectProject_release_{major}_Windows_Test_Cats_Resources",
+          "analysis_method": "functional_tests",
+          "notes": "2026.2.6: build 37427917, stage/v2026.2."
+        },
+        {
+          "build_type_id": "PerfectProject_release_{major}_Windows_Test_Cats_Core",
+          "analysis_method": "functional_tests",
+          "notes": "2026.2.6: build 37427877, stage/v2026.2. Reported on the OSnP/Resources subtask, not on GameUI."
+        }
+      ]
+    },
+    {
+      "key": "gameui",
+      "suite": "auto",
+      "subtask_name_pattern": "^\\[GameUI\\]",
+      "builds": [
+        {
+          "build_type_id": "PerfectProject_release_{major}_Windows_Test_Cats_Frontend",
+          "analysis_method": "functional_tests",
+          "notes": "2026.2.6: Frontend, stage/v2026.2 (the comment linked the config page, not a build)."
+        }
+      ]
+    },
+    {
+      "key": "perf",
+      "suite": "perf",
+      "subtask_name_pattern": "^\\[Perf\\]",
+      "builds": [
+        {
+          "build_type_id": "PerfectProject_release_{major}_QABenchmarkBundle",
+          "analysis_method": "perf_report",
+          "notes": "Composite: starts Android_Test_Benchmark_BrowserStack, IOS_Test_Benchmark_BrowserStack and IOS_Test_Benchmark_BrowserStackMetal (note the IOS casing). 2026.2.6: bundle 37428798, stage/v2026.2; children 37428792 (Android), 37428795 (iOS), 37428797 (iOS Metal)."
+        }
+      ]
+    }
+  ]
+}
