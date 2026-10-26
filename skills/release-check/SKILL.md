@@ -68,10 +68,10 @@ Parse `$ARGUMENTS` and the message:
 | Tasks | container link, or subtask links | search (step 1), then confirm |
 | Assignee | a name | default Anton Melentiev |
 | Slack thread | `https://<workspace>.slack.com/archives/<channel>/p<ts>` | ask in step 3: a link, or no Slack reply this run |
+| Existing builds | TeamCity build links or ids already started for this release | none: all builds get started |
 
 Only the explicit user words change the assignee: "assign to Sasha", "assignee Руслан Байбеков".
 
-| Existing builds | TeamCity build links or ids already started for this release | none: all builds get started |
 Slack thread link → channel id and thread ts: `.../archives/C0CB6H4N672/p1793004591268139` → channel
 `C0CB6H4N672`, ts `1793004591.268139` (insert a dot before the last 6 digits). A `?thread_ts=...` query in the
 link (a link to a reply) wins: it names the parent thread. Read the thread once with
@@ -102,14 +102,14 @@ that the `slack` MCP is not connected (run `/mcp` and authorise it) and carry on
 3. Branch: use `default_branch` when the recent builds of that config ran on it. If they ran on another
    release branch (e.g. `release/vX.Y`), or there are none, ask which branch to use.
 4. Note the latest finished build per config (id, status, statusText): it is the baseline for step 6.
-
-## Step 3 - confirm the plan (stop 1)
-
 5. Existing builds from step 0: `get_build` each (only `id`, `buildTypeId`, `state`, `branchName`, `status`,
    `statusText`; never copy `properties`). Match each to a planned config by `buildTypeId`; the build then
    **replaces** the trigger for that config. A child of a composite (e.g. one benchmark of the bundle) does not
    replace the composite: ask whether to take it alone or start the composite. Ask when a build matches no
    planned config, its branch differs from the planned one, or it is cancelled.
+
+## Step 3 - confirm the plan (stop 1)
+
 Show the plan in chat, then ask with AskUserQuestion (options: start the new builds / change something /
 cancel). Mark every config as **start** or **existing <link> (<state>)**:
 
