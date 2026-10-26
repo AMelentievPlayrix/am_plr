@@ -1,7 +1,7 @@
 ---
 name: release-check
-description: Run the release check for a PerfectProject minor version end to end - find the TeamCity builds for the Asana release subtasks ([Render], [OSnP/Resources], [GameUI], [Perf]), start them, wait for them, analyse the results (functional via failed tests and logs, perf via perf-report), report in chat, and after confirmation comment on the subtasks, assign them (Anton Melentiev by default), complete them and reply in the release Slack thread. Use for "/am:release-check 2026.2.7 both <task> <slack thread>", "run release autotests for 2026.2.7", "check the release, perf only".
-argument-hint: "<minor version> <auto|perf|both> [Asana container or subtask links] [Slack thread link] [assignee]"
+description: Run the release check for a PerfectProject minor version end to end - find the TeamCity builds for the Asana release subtasks ([Render], [OSnP/Resources], [GameUI], [Perf]), start them (or take builds already started), wait for them, analyse the results (functional via failed tests and logs, perf via perf-report), report in chat, and after confirmation comment on the subtasks, assign them (Anton Melentiev by default), complete them and reply in the release Slack thread. Use for "/am:release-check <X.Y.Z> both <task> <slack thread>", "run release autotests for <X.Y.Z>", "check the release, perf only", "check the release, the perf bundle is already running".
+argument-hint: "<minor version> <auto|perf|both> [Asana container or subtask links] [Slack thread link] [existing build links] [assignee]"
 disable-model-invocation: true
 allowed-tools: Read Write Edit Bash(python3 *) Bash(*/.venv/bin/python -I *) Bash(mkdir -p /tmp/release-check-*) mcp__teamcity mcp__asana mcp__victoriametrics mcp__slack Monitor
 ---
@@ -32,7 +32,8 @@ is the approval of the Slack text that rule asks for.
 - **Touch only the subtasks covered by this run.** Never complete the container task, never touch
   subtasks such as [Migration] or [Resave], never re-status or reassign anything else.
 - **A TeamCity `FAILURE` is not a finding by itself.** Read the cause before calling it a failure (step 6).
-- **Never cancel a build** unless the user asks.
+- **Never cancel a build** unless the user asks, and never start a build for a config the user already gave
+  an existing build for.
 - **Never print the TeamCity token** or other secret values; refer to variables by name. `get_build`
   returns build properties that include vault references - never copy them into chat or files.
 
@@ -67,6 +68,7 @@ Parse `$ARGUMENTS` and the message:
 
 Only the explicit user words change the assignee: "assign to Sasha", "assignee Руслан Байбеков".
 
+| Existing builds | TeamCity build links or ids already started for this release | none: all builds get started |
 Slack thread link → channel id and thread ts: `.../archives/C0CB6H4N672/p1793004591268139` → channel
 `C0CB6H4N672`, ts `1793004591.268139` (insert a dot before the last 6 digits). A `?thread_ts=...` query in the
 link (a link to a reply) wins: it names the parent thread. Read the thread once with
@@ -100,15 +102,21 @@ that the `slack` MCP is not connected (run `/mcp` and authorise it) and carry on
 
 ## Step 3 - confirm the plan (stop 1)
 
-Show the plan in chat, then ask with AskUserQuestion (options: start all / change something / cancel):
+5. Existing builds from step 0: `get_build` each (only `id`, `buildTypeId`, `state`, `branchName`, `status`,
+   `statusText`; never copy `properties`). Match each to a planned config by `buildTypeId`; the build then
+   **replaces** the trigger for that config. A child of a composite (e.g. one benchmark of the bundle) does not
+   replace the composite: ask whether to take it alone or start the composite. Ask when a build matches no
+   planned config, its branch differs from the planned one, or it is cancelled.
+Show the plan in chat, then ask with AskUserQuestion (options: start the new builds / change something /
+cancel). Mark every config as **start** or **existing <link> (<state>)**:
 
 ```
-Release check 2026.2.7, suite: both, branch stage/v2026.2
-Container: Тестирование релиза 2026.2.7 <link>
-[Render]          Windows_Test_Cats_Render, RunScreenshotsTests
-[OSnP/Resources]  Windows_Test_Cats_Resources, Windows_Test_Cats_Core
-[GameUI]          Windows_Test_Cats_Frontend
-[Perf]            QABenchmarkBundle (Android, iOS, iOS Metal)
+Release check <X.Y.Z>, suite: both, branch stage/v<X.Y>
+Container: Тестирование релиза <X.Y.Z> <link>
+[Render]          Windows_Test_Cats_Render - start; RunScreenshotsTests - start
+[OSnP/Resources]  Windows_Test_Cats_Resources - start; Windows_Test_Cats_Core - start
+[GameUI]          Windows_Test_Cats_Frontend - start
+[Perf]            QABenchmarkBundle (Android, iOS, iOS Metal) - existing <viewLog link> (running)
 Assignee after a good result: Anton Melentiev
 Slack reply (after approval): <thread link> - "<first words of the parent message>"
 ```
@@ -117,37 +125,49 @@ Include anything you resolved by search or default (container, branch, assignee)
 
 ## Step 4 - start builds
 
-For each planned config: `trigger_build(build_type=<id>, branch=<branch>, comment="release-check <version>")`.
+For each planned config marked **start** (skip the ones with an existing build):
+`trigger_build(build_type=<id>, branch=<branch>, comment="release-check <version>")`.
 Record the returned build id and web URL in `state.json` right away. If a trigger fails, report the error
 as-is and ask (retry / skip that build / stop); keep the builds that did start. Composite configs
 (`RunScreenshotsTests`, `QABenchmarkBundle`) return the composite's id; the wait script lists their children.
 
-As soon as the triggers are done, post the started builds in chat so the user can open them, one line each:
+As soon as the triggers are done, post every build of the run in chat so the user can open them, one line
+each, existing ones marked:
 
 ```
-Started (branch stage/v2026.2):
-[Render]          Windows_Test_Cats_Render - https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_2026_2_Windows_Test_Cats_Render
-[Perf]            QABenchmarkBundle - https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_2026_2_QABenchmarkBundle
+Builds (branch stage/v<X.Y>):
+[Render]          Windows_Test_Cats_Render - started - https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_<X_Y>_Windows_Test_Cats_Render
+[Perf]            QABenchmarkBundle - existing - https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_<X_Y>_QABenchmarkBundle
 ```
 
 Take `<id>` and `buildTypeId` from the `trigger_build` response (`id`, `build_type_id`); never guess an id.
 
 ## Step 5 - wait
 
-Start one Monitor (`timeout_ms` 1800000, description `release-check <version> builds`) on:
+Start one Monitor (`timeout_ms` 1800000, description `release-check <version> builds`) on all builds of the
+run, started and existing:
 
 ```
 <am_plr>/.venv/bin/python -I <skill>/scripts/wait_builds.py <id> <id> ... --interval 60
 ```
 
-It prints one line per state change, each with the build link (`queued` → `running` → `finished
-SUCCESS|FAILURE "<statusText>"`), lists the snapshot dependencies under each line (`dep ...` lines: the
-children of a composite, so you see which one failed) and ends with `ALL FINISHED`. On the first
-`dep` lines of a composite, post the children's links in chat (e.g. Android, iOS, iOS Metal for the bundle),
-and post a short line with the link whenever a build finishes, so the user can follow along. When the Monitor expires before that, re-arm it with the
-same ids: it re-prints the current state. Lines starting with `ERROR` (unknown build, TeamCity unreachable)
-→ report and ask. The token comes from `TEAMCITY_TOKEN` or `<am_plr>/mcp/.env`; if the script says it is not
-set, tell the user to fill `mcp/.env` and stop.
+It prints one line per state change of each listed build: `<id> <buildTypeId> <state> branch=<branch>`, plus
+`waitReason="..."` while queued, plus `SUCCESS|FAILURE "<statusText>" finishDate=<date>` when finished, then
+the build link. The snapshot dependencies follow as `dep ...` lines in the same format (the children of a
+composite, so you see which one failed). It ends with `ALL FINISHED`. When the Monitor expires before that,
+re-arm it with the same ids: it re-prints the current state.
+
+- Report a build when the listed build finishes: for a composite, that is when the whole bundle is done; its
+  children's results come with it from the `dep` lines. Post the children's links once, the first time they
+  appear.
+- **Queue check.** The script also checks queued builds: a non-composite build with no compatible agent, or a
+  build still queued more than 60 minutes after its snapshot dependencies finished, prints
+  `ERROR queue <id> <buildTypeId>: <reason> <link>` and the script exits. Waiting for its own dependencies
+  (e.g. a CATS build waiting for the game build) does not count. Report the reason and ask: keep waiting
+  (re-arm with a bigger `--max-queue-minutes`) / cancel and restart that build / stop.
+- Other `ERROR` lines (unknown build, TeamCity unreachable) → report and ask. The token comes from
+  `TEAMCITY_TOKEN` or `<am_plr>/mcp/.env`; if the script says it is not set, tell the user to fill
+  `mcp/.env` and stop.
 
 While waiting, start the analysis of builds that already finished; do not poll with MCP calls.
 
@@ -309,6 +329,6 @@ https://graphite.local.playrix.com/d/eekd8qvw0czr4f?from=now-14d&to=now
 
 ## Before finishing
 
-Check: every planned build was started and finished (or the user chose to skip it); every verdict has a
+Check: every planned build was started or taken over and finished (or the user chose to skip it); every verdict has a
 reason; Asana and Slack were written only after stop 2, Asana only for subtasks in this run, Slack only as one
 reply in the given thread with the approved text; the final message lists what was written, with links. Say plainly what was not done or not verified.

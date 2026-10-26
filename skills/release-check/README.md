@@ -4,17 +4,20 @@ Run the release check for a PerfectProject minor version: start the TeamCity bui
 report, and close the Asana subtasks when everything is good.
 
 ```
-/am:release-check <minor version> <auto|perf|both> [Asana container or subtask links] [Slack thread link] [assignee]
-/am:release-check 2026.2.7 both https://app.asana.com/.../<container task> https://playrix.slack.com/archives/C0CB6H4N672/p1793004591268139
-/am:release-check 2026.2.7 perf
+/am:release-check <minor version> <auto|perf|both> [Asana container or subtask links] [Slack thread link] [existing build links] [assignee]
+/am:release-check <X.Y.Z> both <Asana container link> <Slack thread link>
+/am:release-check <X.Y.Z> perf, the bundle is already running: <TeamCity build link>
 ```
 
 **What it does**
 
 1. Finds the release subtasks ([Render], [OSnP/Resources], [GameUI], [Perf]) and the TeamCity builds for
    them (`config/build_mapping.json`), checks those configs and the branch exist.
-2. Shows the plan and asks before starting anything.
-3. Starts the builds itself and waits for them (`scripts/wait_builds.py` under Monitor).
+2. Shows the plan and asks before starting anything. Builds you already started (give their links) are
+   taken over instead of started again.
+3. Starts the remaining builds and waits for all of them (`scripts/wait_builds.py` under Monitor). A build
+   stuck in the queue - no compatible agent, or queued over an hour after its dependencies finished - is
+   reported, not waited on forever.
 4. Analyses: failed tests and logs for autotests (a red build is not a bug until the cause is known), the
    perf-report scripts for perf.
 5. Reports in chat with Russian drafts (Asana comments and the Slack reply), then asks before touching
