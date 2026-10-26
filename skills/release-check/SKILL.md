@@ -263,17 +263,20 @@ reply in their Drafts instead of sending it.
 
 ## Slack reply format (Russian)
 
-Short: the overall result, one line per subtask with its build link(s), the Asana container link.
-`slack_send_message` takes standard Markdown: lists, `**bold**` and plain links; no tables or headings. An
-illustration, not a template:
+One or two short sentences: the result and where the details are. The details live in the Asana comments,
+so the reply does not repeat builds, tests or devices; it links the task (the subtask, or the container when
+the reply covers several subtasks). These illustrate the length and tone, they are not templates:
 
 ```
-Тестирование релиза 2026.2.7 - автотесты и перф проверены, блокеров нет.
-- Render - зелёный: <viewLog link>; скриншоты - ок: <viewLog link>
-- OSnP/Resources - Resources ок: <link>; Core - 1 известное падение (VSO-14342, не блокер): <link>
-- GameUI - зелёный: <link>
-- Perf - регрессий нет, отклонения объясняются фермой BrowserStack: <link>
-Задачи закрыты: <container link>
+Авто и перф тесты - всё ок, комментарии в задачах, задачи закрыл: <container link>
+```
+
+```
+Perf OK, комментарии в задаче, задачу закрыл: <subtask link>
+```
+
+```
+CATS - есть падение в Render, похоже на продуктовую проблему, разбираю. Подробности в задаче: <subtask link>
 ```
 
 ## Comment format (Russian)
