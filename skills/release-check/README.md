@@ -23,7 +23,8 @@ report, and close the Asana subtasks when everything is good.
 5. Reports in chat with Russian drafts (Asana comments and the Slack reply), then asks before touching
    Asana or Slack.
 6. If all is good: comments on each subtask, assigns it (Anton Melentiev unless you name someone) and
-   completes it, then replies in the Slack thread under your name. If not: shows what is wrong and asks.
+   completes it, then replies in the Slack thread under your name. If not: offers to post the comments
+   without completing, rerun builds, or stop. Every write waits for your approval.
 
 It asks whenever something is missing or unclear: no tasks, an unknown build config, an unclear branch,
 an ambiguous assignee.

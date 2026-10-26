@@ -27,8 +27,9 @@ is the approval of the Slack text that rule asks for.
 - **Slack posts under the user's own name**: send exactly one reply, only in the given thread, only with the
   text the user approved. Never post to the channel itself, never edit or delete messages, never post when
   the Slack MCP is not connected.
-- **Asana is written only when every result in the run is good** (green, or an explained non-blocking
-  failure - step 6). Otherwise report and ask; write to Asana only if the user then says so explicitly.
+- **Every Asana write is approved at stop 2.** Completing subtasks is offered only when every result in
+  the run is good (green, or an explained non-blocking failure - step 6). When something is blocking,
+  posting the comments without completing is offered instead; nothing is written without that approval.
 - **Touch only the subtasks covered by this run.** Never complete the container task, never touch
   subtasks such as [Migration] or [Resave], never re-status or reassign anything else.
 - **A TeamCity `FAILURE` is not a finding by itself.** Read the cause before calling it a failure (step 6).
@@ -251,17 +252,20 @@ One message:
     list the subtasks.
   - Slack (only if a thread was given): send the reply as shown / do not send. If the user edits the text,
     show the new version and ask again before sending.
-- **Not good**: do not offer the Asana write. Ask what to do: rerun specific builds (back to step 4), treat an
-  item as explained with the user's reason (then re-ask this step), or stop and keep the drafts. A Slack reply
-  that reports the problems may be offered too, but only with its exact text in the question.
+- **Not good**: completing is not offered. One AskUserQuestion:
+  - Asana: post the comments without completing (the drafts as shown, describing the blocking items) / rerun
+    specific builds (back to step 4) / treat an item as explained with my reason (then re-ask this step) /
+    do not touch Asana, keep the drafts.
+  - Slack (only if a thread was given): send the reply as shown (the "problem found" variant) / do not send.
 
 ## Step 9 - write to Asana
 
 1. Assignee: Anton Melentiev → gid `1207120594833706`. Anyone else → `asana_typeahead_search`
    (`resource_type=user`, the name); exactly one match → use its gid; zero or several → ask with the
    candidates as options.
-2. For each subtask in the run: `asana_create_task_story(task_id, text=<comment>)`, then
-   `asana_update_task(task_id, assignee=<gid>, completed=true)` (or comment only, if that was the choice).
+2. For each subtask in the run: `asana_create_task_story(task_id, text=<comment>)`, then, only if completing
+   was approved, `asana_update_task(task_id, assignee=<gid>, completed=true)`. A comment-only choice changes
+   neither the assignee nor the status.
    Record each done write in `state.json`, so a retry never posts a comment twice.
 3. Re-read each subtask (`asana_get_task`, `opt_fields=completed,assignee.name`) and report what changed with
    links. If a write failed, say which and why; do not retry silently.
