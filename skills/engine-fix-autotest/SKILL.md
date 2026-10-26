@@ -93,7 +93,7 @@ wrong, do not weaken the test — report the defect.
 ### 5. Settle the branch before you touch code
 
 Follow [delivery.md](../engine-create-autotest/reference/delivery.md) § Branch (prefix `fix/`) before the first edit. PR and Asana conventions
-come from the rule [writing-git-github-asana.md](../../rules/writing-git-github-asana.md).
+come from the rule [communication.md](../../rules/communication.md).
 
 ### 6. Fix
 

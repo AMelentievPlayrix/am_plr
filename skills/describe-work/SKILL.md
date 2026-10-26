@@ -13,7 +13,7 @@ Given a set of code changes (uncommitted, committed on a branch, or described by
 2. A GitHub PR for the change, linked to that task.
 3. A comment on the Asana task linking back to the PR.
 
-Language, style, PR body and Asana conventions come from the rule [writing-git-github-asana.md](../../rules/writing-git-github-asana.md). Read it first; this skill only adds the task + PR workflow and its constants.
+Language, style, PR body and Asana conventions come from the rule [communication.md](../../rules/communication.md). Read it first; this skill only adds the task + PR workflow and its constants.
 
 ## Known constants (don't re-look these up)
 

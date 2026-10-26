@@ -141,7 +141,7 @@ Nobody will answer questions: never use AskUserQuestion.
 Read and follow /Users/playrix/projects/am_plr/skills/engine-create-autotest/SKILL.md and its reference files
 reference/authoring-rules.md, reference/delivery.md, reference/mcp-tools.md, before writing any code. The
 skill can't be loaded with the Skill tool, so read the files directly. Also obey
-/Users/playrix/projects/am_plr/rules/code.md, python.md and writing-git-github-asana.md. Commit ONLY through the
+/Users/playrix/projects/am_plr/rules/code.md, python.md and communication.md. Commit ONLY through the
 `am:commit` skill (Skill tool), with the paths and delivery.md's split order.
 
 ## Overrides to the skill (these win over the skill)

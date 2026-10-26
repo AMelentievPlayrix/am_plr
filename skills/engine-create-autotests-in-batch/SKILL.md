@@ -24,7 +24,7 @@ PR template, commit policy). Refer to them by path. Subagents cannot load that s
 | Repo survey, per-case analysis brief, cross-checks, verdicts | [reference/analysis.md](reference/analysis.md) |
 | Phase 2 loop, per-item brief with overrides, stacking, Asana, after merges | [reference/execution.md](reference/execution.md) |
 
-Language: chat in English; commits, PRs and Asana in Russian ([writing rule](../../rules/writing-git-github-asana.md)).
+Language: chat in English; commits, PRs and Asana in Russian ([writing rule](../../rules/communication.md)).
 Batch item ids (`F1`, `T2`) and stage names are internal: never put them in commits, PRs or Asana. Name the test,
 case and PR instead ([execution.md](reference/execution.md) § Text for people outside the batch).
 

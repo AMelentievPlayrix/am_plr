@@ -3,7 +3,7 @@
 Applies to both `/am:engine-create-autotest` and `/am:engine-fix-autotest`.
 
 Language, the generic PR body and Asana formatting come from the rule
-[writing-git-github-asana.md](../../../rules/writing-git-github-asana.md). Every commit goes through
+[communication.md](../../../rules/communication.md). Every commit goes through
 the `am:commit` skill. This file adds only what is specific to vso-engine-autotests.
 
 ---

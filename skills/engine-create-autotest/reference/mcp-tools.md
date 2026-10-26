@@ -11,7 +11,7 @@ instead of inventing context. The same server also has `search_cases`, `search_s
 
 **Asana** — read the task (notes and comments come together), its stories and attachments, and post
 the final comment. Tool names depend on the Asana MCP version; see the rule
-[writing-git-github-asana.md](../../../rules/writing-git-github-asana.md) § Asana.
+[communication.md](../../../rules/communication.md) § Asana.
 
 **Images** — `mcp__cats-mcp-server__read_image(source=<path or url>)` reads a screenshot, e.g. an
 Asana attachment. Ignore every other `mcp__cats-mcp-server__*` tool: they drive the VSO Editor in

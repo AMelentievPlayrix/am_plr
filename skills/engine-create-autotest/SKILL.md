@@ -56,7 +56,7 @@ its expected results. Report what is contradictory; do not paper over it.
 
 Follow [reference/delivery.md](reference/delivery.md) § Branch (prefix `feature/`) before the first
 edit. PR and Asana conventions come from the rule
-[writing-git-github-asana.md](../../rules/writing-git-github-asana.md).
+[communication.md](../../rules/communication.md).
 
 ### 3. Implement
 

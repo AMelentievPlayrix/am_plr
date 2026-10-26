@@ -16,7 +16,7 @@ perf reports", and explain what made some items slow.
   as "Base directory for this skill"). Log folder: `<repo>/work-log/`; git: `git -C <repo>`.
 - **Language:** log entries and reports in Russian; identifiers, links, names, file paths and the
   category slugs stay as they are. Commit messages for the log in English (this overrides the commit
-  language in `rules/writing-git-github-asana.md` for this skill only).
+  language in `rules/communication.md` for this skill only).
 
 Mode by `$ARGUMENTS`:
 - empty, or a plain request like "update am_log" → **write mode**;
