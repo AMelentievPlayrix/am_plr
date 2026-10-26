@@ -63,7 +63,7 @@ Parse `$ARGUMENTS` and the message:
 
 | Input | Expected | If missing or unclear |
 |---|---|---|
-| Version | minor `X.Y.Z` (e.g. `2026.2.7`); major = `X.Y` | ask; if only `X.Y` was given, ask which minor (the container name needs it) |
+| Version | minor `X.Y.Z` (e.g. `2026.3.1`); major = `X.Y` | ask; if only `X.Y` was given, ask which minor (the container name needs it) |
 | Suite | `auto`, `perf` or `both` | ask |
 | Tasks | container link, or subtask links | search (step 1), then confirm |
 | Assignee | a name | default Anton Melentiev |
@@ -93,14 +93,14 @@ that the `slack` MCP is not connected (run `/mcp` and authorise it) and carry on
 
 ## Step 2 - builds and branch
 
-1. Substitute `{major}` (`2026_2`) and `{major_dotted}` (`2026.2`) into every `build_type_id` and into
-   `default_branch` (`stage/v2026.2`).
+1. Substitute `{major}` (`X_Y`, e.g. `2026_3`) and `{major_dotted}` (`X.Y`) into every `build_type_id` and into
+   `default_branch` (`stage/vX.Y`).
 2. Check each config exists and see where it runs:
    `list_builds(build_type=<id>, count=5, branch="default:any")`. **Always pass `branch="default:any"`**:
    without a branch filter TeamCity returns only default-branch builds, so a live config looks empty.
    A 404 means the config id is wrong for this release → ask for the real id, then update the mapping.
 3. Branch: use `default_branch` when the recent builds of that config ran on it. If they ran on another
-   release branch (e.g. `release/v2026.2`), or there are none, ask which branch to use.
+   release branch (e.g. `release/vX.Y`), or there are none, ask which branch to use.
 4. Note the latest finished build per config (id, status, statusText): it is the baseline for step 6.
 
 ## Step 3 - confirm the plan (stop 1)
@@ -196,13 +196,19 @@ evidence), or **blocking** (a real problem, or a cause you could not establish).
    evidence (build, story or task link) next to the verdict. No concrete cause → blocking.
 4. Infrastructure failure of one child (e.g. a Mac screenshot agent): recommend rerunning that config and ask.
 
-Precedents (verify the specific cause matches; never pattern-match on status alone):
-- Perf Android benchmark FAILURE only because BrowserStack does not support Xiaomi Redmi Note 9: all
-  `test_performance` runs passed (Asana task `1217906673515578`).
-- 2026.2 screenshot tests: 2 tests failed on the release branch because their reference screenshots were
-  fixed on master and never backported - judged not a release bug.
-- 2026.2.6 Render VSO-8600 and Core VSO-14342: caused by backport b485a4cff6f (#18813) without its master
-  follow-up #18893 - a real cause found from git history; the subtask was completed with that explanation.
+Patterns seen before. Each one is a hypothesis to check against this run's log, failed tests and history,
+never a verdict by itself:
+- **Farm or agent problem, not the product.** BrowserStack lists devices as "not supported ... will be
+  ignored" and the build turns red while every real test passed (tracked in Asana task `1217906673515578`);
+  a single agent fails setup or loses a device, and a rerun on another agent is green.
+- **Stale references on the release branch.** Screenshot tests fail because their references were fixed on
+  master and never backported. Not a release bug, but say which tests and where they were fixed.
+- **A backport without its follow-up.** A fix backported to the release branch without a later master commit
+  that completes it breaks a test that passes on master. Find it with `git log` on the release branch
+  against master for the code the test covers; name both commits. That is a real product cause: report it,
+  and judge with the user whether it blocks.
+- **Repeat from the previous minor.** The same test failed on the previous minor and its subtask comment gave
+  a cause that still applies. Link that comment.
 
 ### Perf build (`perf_report`)
 
@@ -226,8 +232,8 @@ python3 $PERF/draft_verdicts.py --analysis $PR_WORK/analysis.json --history $PR_
   explained by the farm → blocking until a rerun disproves it; a device with no data (e.g. all attempts
   errored) → blocking until rerun.
 - If `summary.md` recommends a `QABenchmarkBundle` rerun, or any device is blocking: ask (rerun the bundle →
-  back to step 4 for that config only / accept with a reason / stop). In 2026.2.6 a rerun cleared both an
-  iPhone 16 with no data and an iPhone 17 Metal deviation.
+  back to step 4 for that config only / accept with a reason / stop). A rerun often clears a device with no
+  data or a one-off deviation; report both runs in the comment.
 - Grafana: use the `grafana_url` values from the perf-report files. Generic dashboards: FPS
   `https://graphite.local.playrix.com/d/eekd8qvw0czr4f?from=now-14d&to=now`, benchmarks
   `https://graphite.local.playrix.com/d/fdrfo71gl1q80a?from=now-14d&to=now`. Never invent a link.
@@ -317,24 +323,24 @@ Short plain sentences a teammate reads at a glance; a link to every build; one c
 illustrate the style, they are not templates to copy word for word:
 
 ```
-Render - прогон зелёный, падений нет: passed 827, ignored 56.
-https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_2026_2_Windows_Test_Cats_Render
-Скриншотные тесты - всё ок: https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_2026_2_RunScreenshotsTests
+Render - прогон зелёный, падений нет: passed <N>, ignored <N>.
+<viewLog link Windows_Test_Cats_Render>
+Скриншотные тесты - всё ок: <viewLog link RunScreenshotsTests>
 ```
 
 ```
-Core: https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_2026_2_Windows_Test_Cats_Core
-Упал VSO-14342 (https://app.qase.io/case/VSO-14342). Причина: <конкретная причина и доказательство - коммит, задача, прошлый релиз>. Не блокер для релиза.
-Resources - всё ок: https://teamcity.local.playrix.com/viewLog.html?buildId=<id>&buildTypeId=PerfectProject_release_2026_2_Windows_Test_Cats_Resources
+Core: <viewLog link Windows_Test_Cats_Core>
+Упал VSO-<id> (https://app.qase.io/case/VSO-<id>). Причина: <конкретная причина и доказательство - коммит, задача, прошлый релиз>. Не блокер для релиза.
+Resources - всё ок: <viewLog link Windows_Test_Cats_Resources>
 ```
 
 ```
-Итоги перф-тестов (BrowserStack), ветка stage/v2026.2, сборки <id> (Android), <id> (iOS), <id> (iOS Metal)
-https://teamcity.local.playrix.com/viewLog.html?buildId=<bundle id>&buildTypeId=PerfectProject_release_2026_2_QABenchmarkBundle
+Итоги перф-тестов (BrowserStack), ветка <branch>, сборки <id> (Android), <id> (iOS), <id> (iOS Metal)
+<viewLog link QABenchmarkBundle>
 https://graphite.local.playrix.com/d/eekd8qvw0czr4f?from=now-14d&to=now
 
-1. Xiaomi Redmi Note 9 - ферма его не поддерживает, девайс пропущен. Из-за этого сборка Android красная, сами тесты прошли.
-2. iPad Air 5, SM_S931B - скачки FPS. Такое на этих моделях уже было много раз за 90 дней на других ветках - глюк фермы.
+1. <девайс> - ферма его не поддерживает, девайс пропущен. Из-за этого сборка Android красная, сами тесты прошли.
+2. <девайсы> - скачки FPS. Такое на этих моделях уже было много раз за 90 дней на других ветках - глюк фермы.
 
 Вывод: реальных регрессий перфа не найдено, все отклонения объясняются нестабильностью девайсов фермы BrowserStack.
 ```
