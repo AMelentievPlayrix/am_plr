@@ -49,10 +49,12 @@ is the approval of the Slack text that rule asks for.
   build id and `buildTypeId` that TeamCity returned. Never pass on the `webUrl` that TeamCity returns
   (`teamcity.playrix.com/build/<id>` or `.../buildConfiguration/...`); the wait script already prints links in
   the right format.
-- Working folder: `WORK=/tmp/release-check-<version>-<YYYYMMDD>`. Keep the state in `$WORK/state.json`
-  (version, suite, container and subtask gids, build plan, triggered build ids, verdicts, Asana writes
-  done) and update it after every step, so a resumed or compacted session continues from the file
-  instead of redoing work. Large outputs (logs, failed tests, perf files) go to `$WORK`, not into chat.
+- Working folder: `WORK=/tmp/release-check-<version>` - by version only, no date, because a run with perf
+  often goes past midnight. Keep the state in `$WORK/state.json` (version, suite, container and subtask
+  gids, build plan, build ids - triggered or taken over, verdicts, Asana and Slack writes done) and update it
+  after every step. On start, if `state.json` exists: show what it holds (builds, their age, writes done) and
+  ask - continue this run / start over (rename the old folder to `$WORK-<YYYYMMDD-HHMM>`, never delete it).
+  Large outputs (logs, failed tests, perf files) go to `$WORK`, not into chat.
 
 ## Step 0 - inputs
 

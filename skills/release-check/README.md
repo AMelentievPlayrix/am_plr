@@ -35,6 +35,6 @@ an ambiguous assignee.
 - `TEAMCITY_TOKEN` in `am_plr/mcp/.env` (the wait script reads it there too).
 - VPN for the perf analysis; the perf-report skill in perfect-project.
 
-Intermediate files: `/tmp/release-check-<version>-<date>/` and `/tmp/perf-report-<branch>-<date>/`.
+Intermediate files and run state: `/tmp/release-check-<version>/` (a rerun of the same version offers to continue) and `/tmp/perf-report-<branch>-<date>/`.
 
 Instructions for Claude: [SKILL.md](SKILL.md).
