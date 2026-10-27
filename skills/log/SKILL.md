@@ -35,10 +35,18 @@ ascending order, and one bullet per item under it:
 - autotest-fix [Windows]: VSO-601 стабилизирован выбор ключа — PR #232
 - blocker-found/ACE: после undo не открывается key popup — https://app.asana.com/0/0/1213...
   - hard: падало только на Windows, воспроизвёл после 4 прогонов; причина в порядке событий фокуса
+- blocker-fixed/ACE (C++): key popup снова открывается после undo — PR #20150
 - perf: разбор алерта FPS на сцене Match3Level (iOS) — шум, не деградация
 ```
 
-Line format: `- <category>[/<area>] [×N] [<platforms>]: <кратко, что сделано> — <refs>`
+Line format: `- <category>[/<area>] [(C++)] [×N] [<platforms>]: <кратко, что сделано> — <refs>`
+- `(C++)` marks work done in C++ code. The report counts it separately, because C++ work is harder for
+  me and should show as its own entries. Mark a line `(C++)` when the change itself was in C++ (`.cpp`, `.h`,
+  `.hpp`, `.mm`, `.cc`), e.g. a blocker fixed in the engine or editor, or UI IDs added in C++. Python
+  work and work with no code change (perf analysis, investigation, testing) have no marker. Each item
+  counts once: one line, `(C++)` or not. If one item had a separate C++ change on top of Python work (e.g.
+  new UI IDs in C++ so a Python autotest could be written), log the C++ change as its own `(C++)` line in
+  the matching category (usually `other`).
 - `×N` only when one line covers several items of the same kind; no `×` means 1.
 - `[<platforms>]`: required for `autotest-new` and `autotest-fix`, not used elsewhere. The platforms each
   test on the line was written or repaired for, comma-separated, using the `Platform` values of
@@ -88,6 +96,8 @@ A blocker found and fixed in the same chat gets two lines: `blocker-found` and `
      (e.g. `config.platform_to_run in Platform.desktop_platforms()` removes all desktop ones);
    - if the test has `Tag.ALL_PLATFORMS` and the chat doesn't say where it was validated, ask the user
      instead of counting every platform.
+   **C++ or not:** mark an item `(C++)` from the files the chat shows changed (C++ sources and headers,
+   usually in perfect-project). If the chat doesn't show which code was changed, ask.
 3. **Hard parts.** Add a `hard:` note only when the chat shows real difficulty: long debugging, a wrong
    first approach, flaky reproduction, a blocker in another team's code, missing access or data. Say what
    was hard in 1–2 sentences. Never invent a reason.
@@ -127,13 +137,18 @@ A blocker found and fixed in the same chat gets two lines: `blocker-found` and `
    `autotest-new` and `autotest-fix` also sum the platform-weighted count (N × platforms per line, 1 for
    lines without a list) and per-platform totals. A test ID (`VSO-<n>`) on several lines of the same
    category counts as one test, and each of its platforms once.
-4. **Print** in Russian, under about 15 lines, ready to read out at the meeting:
+   Count `(C++)` lines apart from the rest: every count above is split into a non-C++ part and a C++
+   part, and the two never overlap (5 blockers fixed, 2 of them in C++ → 3 and 2).
+4. **Print** in Russian, under about 15 lines, ready to read out at the meeting. A category with C++ lines
+   gets a second line, the same one with `, C++` after its name, right below it; no other wording changes:
 
    ```
    Период: 2026-10-06 — 2026-10-12
    Автотесты: новых 7, с учётом платформ 15; починено 3, с учётом платформ 5
      по платформам: iOS 6, Android 5, macOS 7, Windows 2
    Блокеры найдены: 2 (ACE 1, IAP 1); исправлены: 3 (ACE 2, PSI 1)
+   Блокеры исправлены, C++: 2 (ACE 1, Editor 1)
+   Прочее, C++: 1
    Perf-отчётов разобрано: 4
    Заметное:
    - покупки в магазине, 3 теста × 3 платформы — PR #231
@@ -142,7 +157,7 @@ A blocker found and fixed in the same chat gets two lines: `blocker-found` and `
    - key popup в ACE: падало только на Windows, долго воспроизводил
    ```
 
-   Leave out categories with zero count. Print "с учётом платформ" only when it differs from the plain
+   Leave out categories with zero count, and C++ lines with zero count. Print "с учётом платформ" only when it differs from the plain
    count; omit the per-platform line when there are no autotest lines. Pick 3–5 notable items (biggest counts, blockers, items with
    refs). List every `hard:` note in the range, shortened to one line each.
 5. Report only what is in the log. If the range has no entries, say so. Report mode never writes or
