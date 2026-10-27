@@ -72,6 +72,7 @@ Open Claude Code in any project. The plugin is enabled for all of them:
 /am:code-review             review finished changes against the plan and rules: verdict + findings
 /am:log                     log this chat's work to work-log/ (commit + push); /am:log info this week for a report
 /am:release-check           start release autotests/perf for a minor version, analyse, close the Asana subtasks
+/am:update-perf-devices     find BrowserStack perf devices that break the nightly runs, replace them, keep the Asana inventory current
 ```
 
 Claude also picks them up automatically from their descriptions. Team skills keep their own names
