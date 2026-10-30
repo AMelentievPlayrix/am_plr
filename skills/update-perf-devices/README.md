@@ -18,7 +18,8 @@ on the inventory task "Устройства".
   approval: Asana task, branch in a worktree from `origin/master`, commit via `/am:commit`, draft PR, and the
   manual TeamCity run needed to verify it (started only on request).
 - `follow-up`: checks the device PRs and their Mergify backports. For merged ones it drafts the dated comment
-  and the new description for the inventory task and the backport label steps, and writes them after approval.
+  and the new description for the inventory task, says whether stage still needs the change (via
+  `/am:merge-pp` and the minor candidates section), and writes them after approval.
 - `sync-inventory`: rebuilds the inventory description from the YAML files and metrics, shows the diff, and
   updates it after approval.
 

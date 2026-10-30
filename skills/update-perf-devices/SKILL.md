@@ -25,8 +25,10 @@ IDs, paths, patterns and templates used below are in [Reference](#reference) at 
 - **A replacement must be run, not only looked up.** A device present in `devices.json` can still fail to
   open a session (October 2026: the first iPhone 11 fix passed `devices.json` and failed on the farm). The
   PR stays draft until a manual TeamCity run on its branch shows the new device with metrics.
-- **Never trigger, cancel or rerun a build without asking.** Never merge a PR, never add `automerge` or other
-  merge labels unless the user asks.
+- **Never trigger, cancel or rerun a build without asking.** Never merge a PR and add no GitHub labels:
+  merging to master and minor requests go through `/am:merge-pp` (Version VSO, `automerge`, the
+  "VSO: Minor versions" project). Never set a minor version (`X.Y.Z` label or Version VSO) yourself: the
+  release manager does.
 - **Inventory task 1210351684187304**: comment and description only, after its PRs merged. Never re-open,
   re-status, reassign it or touch its dependencies (the TeamCity bot manages those).
 - **Secrets.** BrowserStack credentials only from `BROWSERSTACK_USERNAME` / `BROWSERSTACK_ACCESS_KEY` in the
@@ -96,8 +98,8 @@ One chat message in English:
    two alternatives with their cost, and what is **unverified** (no credentials, no test run yet).
 3. Watch items and farm noise, briefly.
 4. Exactly what will be created: the Russian Asana task (title + full text, template in the Reference),
-   branch `fix/bs-perf-<slug>`, worktree `<wt>/bs_<slug>`, the Russian PR title, labels (version label only,
-   e.g. `2026.3`; the backport label comes later), and the backport plan with the merge-tree result.
+   branch `fix/bs-perf-<slug>`, worktree `<wt>/bs_<slug>`, the Russian PR title (no labels), and the stage
+   plan with the merge-tree result.
 
 Then AskUserQuestion: create as shown / change something / stop. One task and one PR per problem, as in
 October 2026, unless the user wants them joined.
@@ -120,10 +122,12 @@ October 2026, unless the user wants them joined.
    and report the commit or PR, author and date.
 6. **Push and PR**: `git -C <wt>/bs_<slug> push -u origin fix/bs-perf-<slug>`;
    `gh pr create --repo Playrix/perfect-project --draft --base master --head fix/bs-perf-<slug>
-   --title "<title>" --body-file "$T/pr_body.md"`, body per [PR body](#pr-body). Add the version label from stop 1 (`gh pr edit <n> --add-label 2026.3`).
+   --title "<title>" --body-file "$T/pr_body.md"`, body per [PR body](#pr-body). No labels: the
+   playrix-asana-services bot syncs version labels from Version VSO and can drop hand-added ones.
 7. **Report**: task and PR links, and the manual run needed for verification: config id and branch
    `fix/bs-perf-<slug>`. Ask whether to trigger it; only on yes `trigger_build(build_type, branch,
    comment="update-perf-devices <slug>")`. The PR leaves draft only after that run shows the new device.
+   Then the merge: `/am:merge-pp <PR> master` (plus the minor, e.g. `2026.2.8`, when stage needs it).
 8. Clean up per [Artifacts](#artifacts). Remind the user to run `follow-up` after the merge.
 
 ## Follow-up
@@ -143,11 +147,12 @@ October 2026, unless the user wants them joined.
    1. the dated Russian comment, one per merge date, oldest first ([Inventory comment](#inventory-comment));
    2. the new description ([Inventory description](#inventory-description)), as `diff -u` of the current
       and new text (write both to `$T`), with the new device's metric name or "метрик пока нет";
-   3. backport steps: whether stage needs it ([Backport](#backport)), the merge-tree result including earlier
-      PRs that never reached stage, and the exact label to add. Adding the label is a separate yes/no.
+   3. stage: whether it needs the change ([Backport](#backport)), the merge-tree result including earlier
+      PRs that never reached stage, and whether the minor request is already in place (the task in
+      "VSO: Minor versions" / `<X.Y>_approved_minor_candidates`). If not, offer `/am:merge-pp <PR> <X.Y.Z>`.
 5. **After approval**: `asana_create_task_story(1210351684187304, html_text=<comment>)` per comment, then
-   `asana_update_task(1210351684187304, html_notes=<description>)`. Re-read the task and report. Add a
-   backport label only if approved (`gh pr edit <n> --add-label <label>`).
+   `asana_update_task(1210351684187304, html_notes=<description>)`. Re-read the task and report. Run
+   `/am:merge-pp` only if the user said yes to it.
 
 ## Sync-inventory
 
@@ -172,7 +177,7 @@ or `TEAMCITY_DOWNLOAD_DIR`). Each copy holds the BrowserStack key, so:
 Check: nothing was created before stop 1 and nothing written to 1210351684187304 before stop 2; every
 verdict has a build link and quote; every unverified point is said plainly; no secret appears in chat,
 files or Asana; `$T` and the MCP artifact copies are gone; the final message lists what was created, with
-links, and what is left (manual run, merge, backport label, `follow-up`).
+links, and what is left (manual run, `/am:merge-pp` for master and the minor, `follow-up`).
 
 ## Reference
 
@@ -237,11 +242,11 @@ env PLATFORM=<android|ios> ARTIFACTS_DIR="$T" <pp>/.venv/bin/python -I -c "impor
 
 ### Backport
 
-Mergify backports master → `stage/vX.Y` when the PR has the master version label (`2026.3`) plus any
-`2026.2.*` label (`gh label list --search 2026.2.`; offer the newest existing one - e.g. `2026.2.8` may not
-exist yet, creating labels is the user's call). The label can be added after merge; Mergify then opens
-`mergify/bp/stage/vX.Y/pr-<n>` (as #20308 for #19350, #20309 for #20101). Simulate before proposing, in one
-Bash call per chain (variables do not persist):
+A change reaches `stage/vX.Y` only through a minor the release manager approves: the task goes to
+"VSO: Minor versions" / `<X.Y>_approved_minor_candidates` (`/am:merge-pp <PR> <X.Y.Z>` does that), the
+release manager sets the `X.Y.Z` version, and Mergify opens `mergify/bp/stage/vX.Y/pr-<n>` (as #20308 for
+#19350, #20309 for #20101). Never add the minor label yourself. Simulate before proposing, so the request
+can name the PRs that must land first, in one Bash call per chain (variables do not persist):
 
 ```
 git -C <pp> fetch origin master stage/vX.Y
@@ -320,9 +325,10 @@ into a list:
 
 A non-device change in the same merge (e.g. landscape start) gets its own line after the list.
 
-### State as of 2026-10-27
+### State as of 2026-10-29
 
-The description is current. Not yet recorded as comments (record on the first `follow-up` run, one comment
-per merge date): Redmi Note 11 → Moto G71 5G (#20101, backport #20309); iPad 8th → iPad 9th and iPhone 11
-iOS 13 → 14 (#20100, backport #20123); pending: iPhone 11 → iPhone 12 (#20284), Moto G71 5G → Huawei Nova 11 SE
-(#20285), sessions start in landscape (#20286).
+The inventory is current: the 29.10 comment records #20284 (iPhone 11 → iPhone 12), #20285 (Moto G71 5G →
+Huawei Nova 11 SE) and #20286 (landscape start), all merged to master on 29.10, plus the earlier October
+changes (#20100/#20123, #20101/#20309, #19350/#20308). Open: the three tasks are in
+`2026.2_approved_minor_candidates` for 2026.2.8, so stage still has iPhone 11 and Moto G71 5G; the metric
+names of iPhone 12 and Nova 11 SE are unknown until their first nightly. The next `follow-up` fills both in.
