@@ -1,8 +1,8 @@
 ---
 name: log
-description: Keep a short dated log of my work in am_plr/work-log and report on it for bi-weekly meetings. Write mode (`/am:log`, "update am_log", "log this to am_log") adds what was done in the current chat to the log, then commits and pushes it. Report mode (`/am:log info this week`, `info last week`, `info from <date> to <date>`) prints counts and notable items for that period.
-argument-hint: "[info] [this week | last week | from <date> to <date>]"
-allowed-tools: Bash(git -C *am_plr *) Bash(date *)
+description: Keep a short dated log of my work in am_plr/work-log, with links to the Asana tasks and GitHub PRs, and report on it for bi-weekly meetings. Write mode (`/am:log`, "update am_log", "log this to am_log") adds what was done in the current chat to the log, then commits and pushes it. Report mode (`/am:log info this week`, `info last week`, `info from <date> to <date>`) prints counts and notable items for that period, without links unless asked (`... links`).
+argument-hint: "[info] [this week | last week | from <date> to <date>] [links]"
+allowed-tools: Bash(git -C *am_plr *) Bash(date *) Bash(gh pr view *) Bash(gh pr list *)
 ---
 
 # Work log
@@ -31,15 +31,20 @@ ascending order, and one bullet per item under it:
 # 2026-10
 
 ## 2026-10-13
-- autotest-new ×3 [iOS, Android, macOS]: покупки в магазине — Qase VSO-512, VSO-513, VSO-514; PR #231
-- autotest-fix [Windows]: VSO-601 стабилизирован выбор ключа — PR #232
-- blocker-found/ACE: после undo не открывается key popup — https://app.asana.com/0/0/1213...
+- autotest-new ×3 [iOS, Android, macOS]: покупки в магазине — VSO-512, VSO-513, VSO-514
+  - links: https://app.asana.com/0/0/1213000000000001, https://github.com/Playrix/vso-engine-autotests/pull/231
+- autotest-fix [Windows]: VSO-601 стабилизирован выбор ключа
+  - links: https://github.com/Playrix/vso-engine-autotests/pull/232
+- blocker-found/ACE: после undo не открывается key popup
+  - links: https://app.asana.com/0/0/1213000000000002
   - hard: падало только на Windows, воспроизвёл после 4 прогонов; причина в порядке событий фокуса
-- blocker-fixed/ACE (C++): key popup снова открывается после undo — PR #20150
-- perf: разбор алерта FPS на сцене Match3Level (iOS) — шум, не деградация
+- blocker-fixed/ACE (C++): key popup снова открывается после undo
+  - links: https://app.asana.com/0/0/1213000000000002, https://github.com/Playrix/perfect-project/pull/20150
+- perf: разбор алерта FPS на сцене Match3Level (iOS) — шум, не деградация — TeamCity 37500407
 ```
 
-Line format: `- <category>[/<area>] [(C++)] [×N] [<platforms>]: <кратко, что сделано> — <refs>`
+Line format: `- <category>[/<area>] [(C++)] [×N] [<platforms>]: <кратко, что сделано> — <refs>`,
+then optional sub-bullets `  - links: …` and `  - hard: …`, in that order.
 - `(C++)` marks work done in C++ code. The report counts it separately, because C++ work is harder for
   me and should show as its own entries. Mark a line `(C++)` when the change itself was in C++ (`.cpp`, `.h`,
   `.hpp`, `.mm`, `.cc`), e.g. a blocker fixed in the engine or editor, or UI IDs added in C++. Python
@@ -57,9 +62,16 @@ Line format: `- <category>[/<area>] [(C++)] [×N] [<platforms>]: <кратко, 
 - If one test's platforms were done on separate days, it gets separate lines; put its test ID (`VSO-<n>`)
   on each so the report can count it once.
 - `<area>` is required for blocker categories (ACE, ASG, PSI, Inspector, IAP, …), optional otherwise.
-- `<refs>`: Asana link, PR number or URL, Qase case IDs, TeamCity build, whichever the chat has. Omit
+- `<refs>`: references that are not Asana or GitHub links: Qase case IDs, TeamCity build IDs. Omit
   ` — <refs>` if there are none.
-- One line per item, at most about 150 characters. No step-by-step details.
+- Optional sub-bullet `  - links: <url>, <url>`: full URLs of the item's Asana task(s) and GitHub PRs
+  (backports included), Asana first, then PRs. Never a bare `PR #N` or Asana gid as a ref: PR numbers
+  repeat across repos (vso-engine-autotests, perfect-project, teamcity-settings-pp). The description may
+  still mention a PR by number when it is part of the story ("бэкпорт #19827 без фикса #19473"); its URL
+  then goes to `links:` too. Strip query strings (`?focus=true`). Omit the sub-bullet if the item has no
+  Asana task or PR. It has no length limit.
+- One line per item, at most about 150 characters (the `links:` sub-bullet does not count). No
+  step-by-step details.
 - Optional sub-bullet `  - hard: <1–2 предложения>`: why it took long.
 
 ### Categories
@@ -98,18 +110,33 @@ A blocker found and fixed in the same chat gets two lines: `blocker-found` and `
      instead of counting every platform.
    **C++ or not:** mark an item `(C++)` from the files the chat shows changed (C++ sources and headers,
    usually in perfect-project). If the chat doesn't show which code was changed, ask.
-3. **Hard parts.** Add a `hard:` note only when the chat shows real difficulty: long debugging, a wrong
+3. **Links.** Every item that has an Asana task or GitHub PRs gets a `links:` sub-bullet with full URLs.
+   Find them in this order and stop when both kinds are known:
+   - the chat: Asana URLs, PR URLs, `gh pr create` output;
+   - a PR known only by number: `gh pr view <N> -R Playrix/<repo> --json url,body`, where `<repo>` is the
+     repo the chat worked in; if it is unclear, ask;
+   - an item with a PR but no Asana link: take the task from the PR body, the `Asana:` line under
+     `## Ссылки`. If it names several, take the PR's own task; add a related or parent task only when the
+     log line is about it;
+   - an item with an Asana task or Qase ID but no PR (e.g. merged from another chat):
+     `gh pr list -R Playrix/<repo> --author @me --state all --search "<VSO-n or task gid>"`;
+   - backports of a perfect-project PR:
+     `gh pr list -R Playrix/perfect-project --state all --search "backport #<N> in:title"`.
+   If the Asana MCP is connected, it may be used to confirm a task. Never invent or guess a link; if none
+   is found, omit it.
+4. **Hard parts.** Add a `hard:` note only when the chat shows real difficulty: long debugging, a wrong
    first approach, flaky reproduction, a blocker in another team's code, missing access or data. Say what
    was hard in 1–2 sentences. Never invent a reason.
-4. **Nothing to log?** If the chat has no finished or notable work, say so, write nothing and stop.
-5. **Avoid duplicates.** Read the current month file (and the previous month's if today is within the
-   first week). If an entry for the same item already exists (same refs, or the same summary on the same
-   day), update that line (count, refs, hard note) instead of adding a new one. This keeps repeated calls
-   in one chat idempotent.
-6. **Write.** Create `work-log/YYYY-MM.md` with the `# YYYY-MM` title if it is missing; create the
+5. **Nothing to log?** If the chat has no finished or notable work, say so, write nothing and stop.
+6. **Avoid duplicates.** Read the current month file (and the previous month's if today is within the
+   first week). If an entry for the same item already exists (same refs or links, comparing Asana tasks
+   by their gid because the URL forms differ, or the same summary on the same day), update that line
+   (count, refs, links, hard note) instead of adding a new one. This keeps repeated calls in one chat
+   idempotent.
+7. **Write.** Create `work-log/YYYY-MM.md` with the `# YYYY-MM` title if it is missing; create the
    `## YYYY-MM-DD` heading in date order if it is missing; append or update the lines.
-7. **Show** the added or changed lines to the user.
-8. **Commit and push** (only if `git -C <repo> status --porcelain -- work-log/`
+8. **Show** the added or changed lines to the user.
+9. **Commit and push** (only if `git -C <repo> status --porcelain -- work-log/`
    shows changes):
    - Invoke the `am:commit` skill (Skill tool, `skill: "am:commit"`) with these arguments:
      `repo <repo> (use git -C); commit only work-log/; leave every other change
@@ -121,9 +148,13 @@ A blocker found and fixed in the same chat gets two lines: `blocker-found` and `
      often has unrelated uncommitted edits) and push again.
    - On any other failure, or if the retry fails, stop and report the error and the state (committed but
      not pushed, conflict, …). Never force-push, never resolve conflicts on your own.
-9. **Report** in one or two lines: entries added or updated, commit hash, pushed or not.
+10. **Report** in one or two lines: entries added or updated, commit hash, pushed or not.
 
 ## Report mode
+
+Links are printed only on explicit request: `links`, "со ссылками" or "with links" in the arguments
+(`/am:log info last week links`), or the user asking for links in words. Without it, the report has no
+URLs, no `links:` content and no PR numbers.
 
 1. **Resolve the range** from today's date (`date '+%F %A'`):
    - `info this week` → Monday of this week to today;
@@ -151,7 +182,7 @@ A blocker found and fixed in the same chat gets two lines: `blocker-found` and `
    Прочее, C++: 1
    Perf-отчётов разобрано: 4
    Заметное:
-   - покупки в магазине, 3 теста × 3 платформы — PR #231
+   - покупки в магазине, 3 теста × 3 платформы
    - ...
    Сложности:
    - key popup в ACE: падало только на Windows, долго воспроизводил
@@ -160,5 +191,8 @@ A blocker found and fixed in the same chat gets two lines: `blocker-found` and `
    Leave out categories with zero count, and C++ lines with zero count. Print "с учётом платформ" only when it differs from the plain
    count; omit the per-platform line when there are no autotest lines. Pick 3–5 notable items (biggest counts, blockers, items with
    refs). List every `hard:` note in the range, shortened to one line each.
-5. Report only what is in the log. If the range has no entries, say so. Report mode never writes or
+5. **Links, only when requested:** after the summary add a `Ссылки:` section with every item in the range
+   that has a `links:` sub-bullet, one line each: `- <YYYY-MM-DD> <category>: <кратко>: <urls>`. The
+   15-line limit does not apply to this section. Items without links are left out of it.
+6. Report only what is in the log. If the range has no entries, say so. Report mode never writes or
    commits.

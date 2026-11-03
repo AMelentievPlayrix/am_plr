@@ -98,7 +98,8 @@ One chat message in English:
    two alternatives with their cost, and what is **unverified** (no credentials, no test run yet).
 3. Watch items and farm noise, briefly.
 4. Exactly what will be created: the Russian Asana task (title + full text, template in the Reference),
-   branch `fix/bs-perf-<slug>`, worktree `<wt>/bs_<slug>`, the Russian PR title (no labels), and the stage
+   branch `fix/bs_perf_<slug>` (`<slug>` in snake_case: a hyphen in the branch name breaks `MetricsHealthCheck` on
+   a branch run), worktree `<wt>/bs_<slug>`, the Russian PR title (no labels), and the stage
    plan with the merge-tree result.
 
 Then AskUserQuestion: create as shown / change something / stop. One task and one PR per problem, as in
@@ -109,7 +110,7 @@ October 2026, unless the user wants them joined.
 1. **Asana task**: `asana_create_task(name, html_notes, project_id=1212459666284359,
    section_id=1218577784372943, assignee=1207120594833706)` unless the user named someone else.
 2. **Worktree**: `git -C <pp> fetch origin master`, then
-   `git -C <pp> worktree add -b fix/bs-perf-<slug> <wt>/bs_<slug> origin/master`. If the path or branch
+   `git -C <pp> worktree add -b fix/bs_perf_<slug> <wt>/bs_<slug> origin/master`. If the path or branch
    exists, ask; never reuse or delete someone's worktree silently.
 3. **Change**: edit the YAML in place (replace the device's two lines, keep the order and format), or the
    test code for a capability problem. Re-run `check_devices.py check --repo <wt>/bs_<slug> --ref HEAD`.
@@ -120,12 +121,12 @@ October 2026, unless the user wants them joined.
 5. **Still needed?** `git -C <pp> fetch origin master && git -C <pp> log origin/master -S'<new deviceName>'
    --oneline -- ci/bs_performance`, plus the open PRs from step a.6. If someone landed or opened it, stop
    and report the commit or PR, author and date.
-6. **Push and PR**: `git -C <wt>/bs_<slug> push -u origin fix/bs-perf-<slug>`;
-   `gh pr create --repo Playrix/perfect-project --draft --base master --head fix/bs-perf-<slug>
+6. **Push and PR**: `git -C <wt>/bs_<slug> push -u origin fix/bs_perf_<slug>`;
+   `gh pr create --repo Playrix/perfect-project --draft --base master --head fix/bs_perf_<slug>
    --title "<title>" --body-file "$T/pr_body.md"`, body per [PR body](#pr-body). No labels: the
    playrix-asana-services bot syncs version labels from Version VSO and can drop hand-added ones.
 7. **Report**: task and PR links, and the manual run needed for verification: config id and branch
-   `fix/bs-perf-<slug>`. Ask whether to trigger it; only on yes `trigger_build(build_type, branch,
+   `fix/bs_perf_<slug>`. Ask whether to trigger it; only on yes `trigger_build(build_type, branch,
    comment="update-perf-devices <slug>")`. The PR leaves draft only after that run shows the new device.
    Then the merge: `/am:merge-pp <PR> master` (plus the minor, e.g. `2026.2.8`, when stage needs it).
 8. Clean up per [Artifacts](#artifacts). Remind the user to run `follow-up` after the merge.
@@ -223,6 +224,7 @@ env PLATFORM=<android|ios> ARTIFACTS_DIR="$T" <pp>/.venv/bin/python -I -c "impor
 | `push_file` → `adb ... remote fchown failed: Operation not permitted` | device unusable (no config push) | replace |
 | `Unable To Rotate Device` | test/capability problem, not the device | sessions must start in landscape (`deviceOrientation`) |
 | `Batch ... timed out after 1800 seconds` after the SDK printed "All done!" | side effect of another failing device | not a separate problem |
+| `MetricsHealthCheck`: `Invalid metric name: PerfectProject:benchmark:<platform>:<branch>:...` on a branch run | the branch name has a hyphen; `/` becomes `_`, `-` is invalid in a metric name; the run stops before BrowserStack | rerun on a branch without hyphens (`fix/bs_perf_<slug>`, `<slug>` in snake_case) |
 | `<device> with success_runs: 0, failure_runs: N`, `add error:` | the device failed every attempt | find the cause in the batch log |
 | no `Driver created successfully: <device>` in any batch | the session never opened | look at the response after the session request |
 
