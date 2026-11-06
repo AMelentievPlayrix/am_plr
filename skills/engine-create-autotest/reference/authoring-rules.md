@@ -250,6 +250,20 @@ def test_XXX_simple_purchase_uwp(step):
   record it as a risk or a blocker instead of shipping it.
 - Forbidden stabilisers: see [delivery.md](delivery.md) § Forbidden fixes.
 
+## State between tests — critical
+
+App state can outlive a test: tests in one session share the app, and on macOS the app's GlobalVars and SDK
+settings persist across launches. A Pre-ToS test once failed only after another test had completed the launch
+(stored in GlobalVars), because `launch_start` is then dropped.
+
+- Every test starts from a known state it sets up itself: a shared reset step at the start, not an assumption
+  about test order.
+- A reset step clears everything the test relies on (e.g. destroy and wipe the tracker before a restart, not
+  only restart), and is verified by running the test right after another test that changes that state.
+- A test that changes persistent settings (an SDK's COPPA flag, Adjust settings) puts them back in a fixture
+  teardown.
+- When a shared reset step changes, rerun the tests that use it on the affected platforms.
+
 ## Branching
 
 An `if` is allowed in exactly three cases:
