@@ -157,7 +157,9 @@ Open the PR only after:
 - `.env` untouched (every run went through `run_on_platform.py`);
 - every change committed, and nothing of the user's staged.
 
-Then run the rule's "still needed" and own-history checks, and push. This repository has no
+Then run the rule's "still needed" and own-history checks, and push. If the SSH push fails with
+`Permission denied (publickey)`, push over HTTPS instead:
+`git push https://github.com/Playrix/vso-engine-autotests.git <branch>` (fetch the same way). This repository has no
 `.github/pull_request_template.md`, so use the rule's body template with these sections filled in:
 
 - **Причина** — for a fix: the root cause with evidence; for a new test: the Qase case and why now.
