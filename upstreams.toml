@@ -33,9 +33,15 @@ command = "${VENV_PYTHON}"
 args = ["${upstream.vso-engine-autotests}/ai/mcp_servers/qase/qase-mcp-server.py"]
 env = { PYTHONPATH = "${upstream.vso-engine-autotests}", QASE_API_TOKEN = "${QASE_API_TOKEN?}" }
 
+# Asana's V2 MCP server (the V1 /sse server shuts down on 2026-11-17). Pre-registered OAuth: create an MCP app at
+# app.asana.com/0/my-apps with redirect URL http://localhost:8080/callback, put its client ID in mcp/.env as
+# ASANA_CLIENT_ID, and the client secret as ASANA_CLIENT_SECRET (setup passes it to Claude Code, which keeps it in the keychain).
+# Tools are named like get_task / create_tasks / add_comment, not the V1 asana_* names.
 [mcp.asana]
-type = "sse"
-url = "https://mcp.asana.com/sse"
+url = "https://mcp.asana.com/v2/mcp"
+oauth = { clientId = "${ASANA_CLIENT_ID}", callbackPort = 8080 }
+# Not written to .mcp.json: setup stores it in the keychain via `claude mcp add --client-secret` (see sync.py).
+oauth_secret = "${ASANA_CLIENT_SECRET}"
 
 # Slack's official hosted MCP. OAuth as yourself (authorise in /mcp), so messages post under your name.
 # Slack's server has no dynamic client registration: the clientId is the one Slack publishes for Claude Code

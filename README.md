@@ -21,7 +21,7 @@ Needs [uv](https://docs.astral.sh/uv/). The team repos must be siblings of am_pl
    | `~/projects/am_plr/scripts/setup.sh` | `D:\projects\am_plr\scripts\setup.ps1` |
 
 2. **Do the "Next steps" it prints at the end.** Only what's still missing is listed, in order:
-   - create `mcp/.env` from `mcp/.env.example` and fill in `TEAMCITY_TOKEN` (git-ignored);
+   - setup creates `mcp/.env` from `mcp/.env.example` with an empty line for every credential; fill in `TEAMCITY_TOKEN` and `ASANA_CLIENT_ID` (git-ignored), then re-run setup;
    - install the plugin: in Claude Code run `/plugin marketplace add <am_plr>`, then `/plugin install am@am-plr`;
    - review the Claude Code / VS Code settings with the printed diff command, then run the printed copy command.
      On a new machine (no `~/.claude/settings.json`) the blueprint is copied as is: put your token in place of

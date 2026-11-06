@@ -15,6 +15,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tomllib
@@ -26,6 +27,7 @@ GEN_DIR = REPO / "artifacts" / "generated"
 PROJECT_MCP = REPO / ".mcp.json"  # generated; loaded by Claude Code when am_plr is the first workspace folder
 MCP_ENV = REPO / "mcp" / ".env"  # tokens, git-ignored (template: mcp/.env.example)
 MCP_ENV_EXAMPLE = REPO / "mcp" / ".env.example"
+CLAUDE_BIN = "claude"
 LEGACY_ENV = REPO / ".env"  # pre-mcp/.env location, still read as a fallback
 VENV_PYTHON = REPO / ".venv" / "bin" / "python"
 UV = os.environ.get("AM_PLR_UV") or "uv"
@@ -239,16 +241,12 @@ def sync_settings(upstreams):
 
 def check_tokens(unset):
     """Credentials come from mcp/.env and are written literally into the generated .mcp.json."""
-    if not MCP_ENV.is_file():
-        info(f"{MCP_ENV} missing - every server falls back to its own repo .env")
-        todo.append(("Create mcp/.env with your tokens (git-ignored)", [
-            f"cp {shlex.quote(str(MCP_ENV_EXAMPLE))} {shlex.quote(str(MCP_ENV))}  # then fill it in"]))
     for name, names in unset.items():
         warn(f"mcp '{name}': {', '.join(names)} not set in {MCP_ENV} - omitted from {PROJECT_MCP.name}")
     if unset:
         todo.append((f"Fill in the missing token(s) in {MCP_ENV}, then re-run setup",
                      sorted({v for vs in unset.values() for v in vs})))
-    elif MCP_ENV.is_file():
+    else:
         info(f"all MCP token(s) resolved from {MCP_ENV}")
 
 
@@ -358,32 +356,116 @@ def resolve_tokens(server, env_values):
     A ${VAR?} is an optional override: unset is the normal case, so it is reported, not warned about.
     Returns (server, [required but unset], [vars taken from mcp/.env], [optional and unset]).
     """
-    block = server.get("env")
-    if not isinstance(block, dict):
-        return server, [], [], []
-    out, missing, filled, optional = {}, [], [], []
-    for k, v in block.items():
-        m = TOKEN_REF.match(v) if isinstance(v, str) else None
-        if not m:
-            out[k] = v
-            continue
-        name = m.group(1)
-        # Only mcp/.env (and the legacy root .env) decide this - deliberately NOT os.environ, so
-        # emptying a token here drops it from the config instead of silently reusing a stale export.
-        value = env_values.get(name)
-        if value:
-            out[k] = value
-            filled.append(name)
-        elif m.group(2):
-            optional.append(name)
-        else:
-            missing.append(name)
     server = dict(server)
-    if out:
-        server["env"] = out
-    else:
-        server.pop("env", None)
+    missing, filled, optional = [], [], []
+    # "oauth" is resolved the same way: its clientId comes from mcp/.env, and without one the whole block
+    # is dropped (a clientId-less http server would only fail dynamic client registration).
+    for key in ("env", "oauth"):
+        block = server.get(key)
+        if not isinstance(block, dict):
+            continue
+        out, unresolved = {}, False
+        for k, v in block.items():
+            m = TOKEN_REF.match(v) if isinstance(v, str) else None
+            if not m:
+                out[k] = v
+                continue
+            name = m.group(1)
+            # Only mcp/.env (and the legacy root .env) decide this - deliberately NOT os.environ, so
+            # emptying a token here drops it from the config instead of silently reusing a stale export.
+            value = env_values.get(name)
+            if value:
+                out[k] = value
+                filled.append(name)
+            else:
+                unresolved = True
+                (optional if m.group(2) else missing).append(name)
+        if key == "oauth" and unresolved:
+            server.pop(key)
+        elif out:
+            server[key] = out
+        else:
+            server.pop(key, None)
     return server, missing, filled, optional
+
+
+def prepare_env_file(mcp_specs):
+    """Create mcp/.env from the template and add a placeholder line for every credential upstreams.toml
+    references, so the only manual step left is filling in the values."""
+    wanted = {}  # name -> optional everywhere it is used
+    for spec in mcp_specs.values():
+        for key in ("env", "oauth"):
+            block = spec.get(key)
+            for v in block.values() if isinstance(block, dict) else ():
+                m = TOKEN_REF.match(v) if isinstance(v, str) else None
+                if m:
+                    wanted[m.group(1)] = wanted.get(m.group(1), True) and bool(m.group(2))
+        m = TOKEN_REF.match(spec.get("oauth_secret", ""))
+        if m:
+            wanted[m.group(1)] = wanted.get(m.group(1), True) and bool(m.group(2))
+    created = not MCP_ENV.is_file()
+    text = ""
+    if not created:
+        text = MCP_ENV.read_text(encoding="utf-8")
+    elif MCP_ENV_EXAMPLE.is_file():
+        text = MCP_ENV_EXAMPLE.read_text(encoding="utf-8")
+    present = set(re.findall(r"^\s*#?\s*([A-Za-z_][A-Za-z0-9_]*)=", text, re.M))  # a commented `# VAR=` counts
+    added = [n for n in wanted if n not in present]
+    if not (created or added):
+        return
+    lines = [f"{'# ' if wanted[n] else ''}{n}=" for n in added]
+    if lines:
+        text = text.rstrip("\n") + ("\n\n" if text.strip() else "") + "\n".join(lines) + "\n"
+    MCP_ENV.write_text(text, encoding="utf-8", newline="\n")
+    MCP_ENV.chmod(0o600)  # holds real tokens
+    if created:
+        ok(f"{MCP_ENV} created from {MCP_ENV_EXAMPLE.name}")
+    if added:
+        ok(f"{MCP_ENV.name}: placeholder(s) added for {', '.join(added)}")
+
+
+def find_claude():
+    """The CLI on PATH, else the one bundled with the newest VS Code extension (not on PATH by default)."""
+    found = shutil.which("claude")
+    if found:
+        return found
+    bundled = sorted((Path.home() / ".vscode" / "extensions").glob(f"anthropic.claude-code-*/resources/native-binary/{CLAUDE_BIN}"))
+    return str(bundled[-1]) if bundled else None
+
+
+def register_oauth_secrets(servers, secret_refs, env_values):
+    """Claude Code keeps an OAuth client secret in the keychain, never in .mcp.json, and only
+    `claude mcp add --client-secret` stores it. Run that for each server with an oauth_secret in upstreams.toml;
+    the secret goes in through MCP_CLIENT_SECRET, so there is no prompt and it never appears in argv."""
+    for name, ref in secret_refs.items():
+        server = servers[name]
+        oauth = server.get("oauth") or {}
+        if not oauth.get("clientId"):
+            continue  # already reported as a missing client id
+        m = TOKEN_REF.match(ref)
+        secret = env_values.get(m.group(1)) if m else None
+        add = ["mcp", "add", "--transport", "http", "--client-id", oauth["clientId"], "--client-secret",
+               "--callback-port", str(oauth.get("callbackPort", 8080)), "--scope", "project", name, server["url"]]
+        manual = ("claude " + " ".join(add), "paste the client secret when it asks")
+        claude = find_claude()
+        if not secret or not claude:
+            reason = f"{m.group(1) if m else 'the secret'} not set in {MCP_ENV.name}" if not secret else "claude CLI not found"
+            warn(f"mcp '{name}': {reason} - client secret not stored")
+            todo.append((f"mcp '{name}': store the OAuth client secret once (or set it in {MCP_ENV.name} and re-run setup)",
+                         [manual[0], f"# {manual[1]}"]))
+            continue
+        env = {**os.environ, "MCP_CLIENT_SECRET": secret}
+        run = lambda *a: subprocess.run([claude, *a], cwd=REPO, env=env, capture_output=True, text=True,
+                                        errors="replace", timeout=60)
+        run("mcp", "remove", name, "--scope", "project")  # add refuses an existing name; fails harmlessly if absent
+        r = run(*add)
+        if r.returncode:
+            warn(f"mcp '{name}': claude mcp add failed (rc={r.returncode}) - client secret not stored")
+            for line in (r.stderr or r.stdout).replace(secret, "***").strip().splitlines()[-3:]:
+                info(line)
+            todo.append((f"mcp '{name}': store the OAuth client secret by hand", [manual[0], f"# {manual[1]}"]))
+        else:
+            ok(f"mcp '{name}': client secret stored in the keychain via claude mcp add")
 
 
 def project_mcp():
@@ -396,12 +478,20 @@ def project_mcp():
 def write_project_mcp(mcp_specs, upstreams):
     """upstreams.toml [mcp.*] -> .mcp.json for this machine. Generated + git-ignored: it holds real tokens."""
     env_values = load_env_file()
-    servers, unset, fallbacks = {}, {}, {}
+    servers, unset, fallbacks, secret_refs = {}, {}, {}, {}
     for name, spec in mcp_specs.items():
         spec = dict(spec)
         install = spec.pop("install", None)
+        if "oauth_secret" in spec:
+            secret_refs[name] = spec.pop("oauth_secret")
         server = {"type": "http" if "url" in spec else "stdio", **subst(spec, upstreams)}
         server, missing, filled, optional = resolve_tokens(server, env_values)
+        oauth = spec.get("oauth")
+        if isinstance(oauth, dict) and "callbackPort" in oauth and any(
+                isinstance(v, str) and TOKEN_REF.match(v) for v in oauth.values()):
+            # Your own OAuth app (not a published client id): its redirect URL must match the port exactly.
+            todo.append((f"mcp '{name}': in its OAuth app settings set the redirect URL, then authorise in /mcp", [
+                f"http://localhost:{oauth['callbackPort']}/callback"]))
         if optional:
             fallbacks[name] = optional
         if "command" in server:
@@ -413,6 +503,7 @@ def write_project_mcp(mcp_specs, upstreams):
             unset[name] = missing
         ok(f"mcp '{name}'" + (f" - token(s) from {MCP_ENV.name}: {', '.join(filled)}" if filled else ""))
 
+    register_oauth_secrets(servers, secret_refs, env_values)
     before = project_mcp()
     extra = {n: s for n, s in before.items() if n not in servers}
     for n, s in extra.items():  # .mcp.json is git-ignored: a hand-added server has no other copy
@@ -482,6 +573,7 @@ def main():
     ensure_venv()  # before the MCP step: .mcp.json points every server at this venv's python
 
     step(f"MCP -> {PROJECT_MCP}")
+    prepare_env_file(mcp_specs)
     servers, unset = write_project_mcp(mcp_specs, upstreams)
     check_tokens(unset)
     check_workspaces()
