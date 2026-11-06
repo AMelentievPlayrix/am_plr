@@ -90,6 +90,7 @@ skills/<name>/SKILL.md          my skills -> /am:<name> in every project
 agents/<name>.md                my subagents -> am:<name>
 work-log/YYYY-MM.md             my work log, written and pushed by /am:log
 rules/*.md                      my rules, loaded in every session (`paths:` frontmatter to scope)
+artifacts/memory/<date>_<slug>/ long-term memory of multi-day work, git-ignored (rules/long-term-memory.md)
 mcp/<name>/                     code of my own MCP servers (configured in upstreams.toml)
 mcp/.env                        tokens for the MCP servers, git-ignored (template: mcp/.env.example)
 upstreams.toml                  team repos I follow (paths relative to am_plr's parent) + every MCP server
