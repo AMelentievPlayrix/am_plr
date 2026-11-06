@@ -77,7 +77,8 @@ Non-negotiables, repeated here because they are violated most often:
 ### 4. Validate per platform
 
 Follow [reference/delivery.md](reference/delivery.md) § Validation and run budget: the platform
-matrix, `.env` switching and restore, at most 5 runs per platform, stop conditions and forbidden
+matrix, platform runs through `scripts/run_on_platform.py` (`.env` is never edited or printed), at most
+5 runs per platform, stop conditions and forbidden
 fixes. On failure, diagnose before editing.
 
 ### 5. Halt when the budget is spent
@@ -115,7 +116,7 @@ link.
 6. `🔴 Blockers`, if any
 7. `ℹ️ Files, commands, PR and Asana links`
 
-State plainly whether `.env` was restored and whether the case is fully covered.
+State plainly that `.env` was left untouched and whether the case is fully covered.
 
 ## Hard prohibitions
 

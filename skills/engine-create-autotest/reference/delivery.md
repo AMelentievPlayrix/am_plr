@@ -89,15 +89,23 @@ Validate on every applicable platform unless the user says skip:
 | `macOS`, `android_on_linux`, `ios_on_linux` | Only when the host is macOS |
 | `Windows`, `UWP` | Only when the host is Windows |
 
-For each platform:
+For each platform, run through [scripts/run_on_platform.py](../scripts/run_on_platform.py). It reads that
+platform's block of `.env`'s `# App config` in-process and passes it to the run as environment, so `.env` is
+never edited, restored or printed (its platform blocks hold store credentials):
 
-1. Record the original `.env`, then edit its `# App config` block: comment out the old platform,
-   uncomment the target one.
-2. `make ai-run-tests key=<test_name> platform_to_run=<PLATFORM_TAG>`
-3. Validate only active, uncommented code.
+```bash
+<am_plr>/.venv/bin/python -I <this skill>/scripts/run_on_platform.py <ios|android|mac|...> \
+    [--set BROWSERSTACK_DEVICES_TO_RUN=<id>] [--env-file <main checkout>/.env] \
+    -- make ai-run-tests key=<test_name> platform_to_run=<PLATFORM_TAG>
+```
 
-**Restore `.env` to its original content when validation finishes — including when you stop early
-or hit the run budget** — and say so in the final report. `.env` is never committed.
+- The block name is the `.env` header (`ios`, `android`, `mac`); `platform_to_run` is the case-sensitive tag
+  (`iOS`, `Android`, `macOS`). A lowercase tag deselects every test.
+- In a git worktree, pass `--env-file` of the main checkout: a shared venv's `load_dotenv()` would find the main
+  `.env` first anyway.
+- Never `cat`, `grep`, `sed` or otherwise print `.env`. Use `--set` for a non-secret override (device id, app
+  path); if a run needs a value that is in no block, ask instead of editing the file.
+- Validate only active, uncommented code. `.env` is never committed.
 
 **At most 5 automatic runs per platform** (the repo's `.cursor/rules/test.mdc` says 3; this limit
 wins). Before each rerun, diagnose: name the exact symptom and the failing step, list 1–3 likely
@@ -146,7 +154,7 @@ Open the PR only after:
 
 - a green target run on every applicable platform;
 - `make code-style-check` passing;
-- `.env` restored to its original content;
+- `.env` untouched (every run went through `run_on_platform.py`);
 - every change committed, and nothing of the user's staged.
 
 Then run the rule's "still needed" and own-history checks, and push. This repository has no

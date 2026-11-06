@@ -140,7 +140,7 @@ was validated, and links. Add anything worth a separate task under "Замече
 6. `🔴 Blockers`, if any
 7. `ℹ️ Files, PR link, Asana link`
 
-State plainly whether `.env` was restored and whether the working tree is clean.
+State plainly that `.env` was left untouched and whether the working tree is clean.
 
 ## Hard prohibitions
 
